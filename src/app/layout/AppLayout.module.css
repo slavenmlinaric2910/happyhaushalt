@@ -1,0 +1,50 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f6f3ef; /* warm off-white / paper */
+}
+
+.main {
+  flex: 1;
+  padding: 1rem;
+  padding-top: 4rem; /* Account for offline banner */
+  padding-bottom: 5rem; /* Account for bottom nav */
+  max-width: 768px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-around;
+  padding: 0.5rem 0;
+  z-index: 100;
+}
+
+.navItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 0.75rem;
+  transition: color 0.2s;
+}
+
+.navItem:hover {
+  color: #6366f1;
+}
+
+.navItem.active {
+  color: #6366f1;
+}
+

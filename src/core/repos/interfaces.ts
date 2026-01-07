@@ -1,0 +1,27 @@
+import type {
+  Household,
+  Member,
+  ChoreTemplate,
+  TaskInstance,
+} from '../types';
+
+export interface HouseholdRepo {
+  createHousehold(data: { name: string }): Promise<Household>;
+  joinHousehold(joinCode: string): Promise<Household>;
+  getCurrentHousehold(): Promise<Household | null>;
+  listMembers(householdId: string): Promise<Member[]>;
+}
+
+export interface ChoreRepo {
+  listChores(householdId: string): Promise<ChoreTemplate[]>;
+  createChore(data: Omit<ChoreTemplate, 'id' | 'householdId' | 'rotationCursor' | 'isArchived'>): Promise<ChoreTemplate>;
+  updateChore(id: string, data: Partial<ChoreTemplate>): Promise<ChoreTemplate>;
+  archiveChore(id: string): Promise<void>;
+}
+
+export interface TaskRepo {
+  listTasks(householdId: string, range: { start: Date; end: Date }): Promise<TaskInstance[]>;
+  completeTask(taskId: string): Promise<void>;
+  regenerateTasksIfNeeded(householdId: string): Promise<void>;
+}
+

@@ -1,0 +1,177 @@
+---
+alwaysApply: true
+---
+# UI Design Rules (Tody-like minimal, soft cards, hand-drawn icons)
+
+## Design Goal
+Build a calm, minimalist PWA UI with:
+- soft card surfaces
+- lots of whitespace
+- rounded corners
+- subtle shadows
+- gentle status indicators (dots + small chips)
+- friendly hand-drawn/monoline illustrations
+
+Do NOT add gamification, bright gradients, heavy borders, or dense dashboards.
+
+---
+
+## Core Layout
+- Mobile-first (iPhone-like), max content width 420px.
+- Use consistent page padding: 20px left/right.
+- Vertical rhythm: 12–16px between elements, 20–24px between sections.
+- Pages follow: Title row (centered title) + optional icon button on right.
+
+### Navigation
+- Bottom nav with 3 tabs: Home, Chores, Household.
+- Icons are minimal monoline (no filled icons).
+- Active tab uses slightly darker text/icon; no loud highlight.
+
+---
+
+## Color + Surface Tokens
+Use a warm off-white background and subtle pastel surfaces.
+
+### Base
+- App background: off-white / paper (#F6F3EF-ish)
+- Card background: white (#FFFFFF)
+- Divider lines: very light gray (#E9E4DD-ish)
+
+### Pastels (only for tile backgrounds / small accents)
+- Mint / soft green
+- Powder blue
+- Warm beige / sand
+- Soft rose (only for overdue chip)
+
+Rules:
+- Never use saturated colors.
+- Do not use gradients.
+- Pastels appear as very light background tints only.
+
+---
+
+## Typography
+- Use a clean sans (system UI font stack).
+- Title: 22–24px, semibold.
+- Section header ("Areas"): 18–20px, semibold.
+- Body: 14–16px, regular.
+- Meta text (due, assigned): 12–13px, medium/regular.
+
+Rules:
+- Avoid ALL CAPS.
+- Avoid heavy bolding. Use weight sparingly.
+
+---
+
+## Cards + Elevation
+All content is card-based.
+
+Card rules:
+- Border radius: 18–22px.
+- Shadow: subtle, soft (low opacity), no harsh outlines.
+- No thick borders. If needed, 1px very light stroke.
+
+Tile cards (Areas):
+- Large icon/illustration centered or top-aligned.
+- Title centered.
+- Status dot at top-right.
+- Optional small chip at bottom (e.g., “2 Due today”).
+
+---
+
+## Status System (very minimal)
+Use only:
+- Status dot (top-right on tiles)
+- Chip (pill badge) for due/overdue
+
+Dot rules:
+- Green = OK
+- Yellow = Due today
+- Red = Overdue
+Keep the dot small (8–10px), with subtle shadow.
+
+Chip rules:
+- Rounded pill with light background tint, minimal text.
+- Examples: “Due today”, “Overdue”
+- Do not stack many chips; max 1 per row element.
+
+---
+
+## House Mood Component
+Top card on Home screen:
+- Left: small house illustration (48–64px)
+- Right: title “House mood” + one sentence.
+- No extra statistics in this card.
+Mood logic:
+- 🙂 All good: no overdue
+- 😵 Needs attention: overdue > 0
+- 😐 Optional: many due today (only if needed)
+
+Keep it simple and calm (no shaming language).
+
+---
+
+## Icons & Illustrations
+Important: Use TWO icon styles:
+1) Functional UI icons (gear, plus, nav icons): monoline icon set (e.g., Lucide).
+2) Area illustrations (kitchen pot, bathtub, sofa, clipboard) + house mood: hand-drawn SVGs.
+
+Rules:
+- UI icons: stroke only, rounded caps, consistent size (20–24px).
+- Illustrations: simple black/gray linework + tiny pastel fill + minimal shadow.
+- No detailed drawings, no photorealism.
+
+Implementation guidance:
+- Create an <Illustration name="kitchen" /> component that renders a local SVG.
+- Create a <IconButton> component for consistent gear/plus buttons.
+
+---
+
+## Controls
+- Buttons: rounded, soft, no strong gradients.
+- Primary action (FAB + button): muted beige circle with plus.
+- Forms: simple, spacious, iOS-like.
+- Inputs: light background, subtle border, large tap targets (min 44px height).
+
+---
+
+## Screen Composition Rules
+Home:
+- House mood card
+- “Areas” header
+- 2x2 area grid
+- FAB (+) centered above bottom nav
+
+Chores:
+- Card list of templates
+- Each item: illustration + title + frequency + “Next: …”
+- Tap opens edit screen
+
+Edit chore:
+- Large illustration + title
+- Sections: Assigned to, Area, Frequency, Checklist (optional)
+- Save button pinned low
+
+Household:
+- Members list (cards)
+- Join code + copy button
+- Keep it clean, no extra widgets.
+
+---
+
+## Don’ts
+- No gamification, no points, no streaks, no confetti.
+- No dense tables.
+- No neon colors or heavy contrast.
+- No multiple competing floating buttons.
+- No modal overload; prefer simple screens.
+
+---
+
+## Definition of Done (UI)
+A screen is only done if:
+- spacing matches tokens
+- typography matches rules
+- cards use consistent radius/shadow
+- icons follow the two-style rule
+- no additional “extra” UI elements were added

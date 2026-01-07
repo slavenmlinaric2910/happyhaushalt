@@ -1,0 +1,78 @@
+.areaTile {
+  position: relative;
+  padding: 1.5rem 1rem;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.statusDot {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.areaIllustration {
+  width: 75%;
+  max-width: 88px;
+  aspect-ratio: 1;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.areaImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.areaName {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.areaChip {
+  margin-top: 0.5rem;
+}
+
+.chip {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #374151;
+  border: none;
+}
+
+.chipOverdue {
+  background-color: #fef2f2; /* soft rose */
+  color: #991b1b;
+}
+
+/* Background tints - very light pastels */
+.bg-warm {
+  background-color: #faf9f6; /* warm off-white */
+}
+
+.bg-blue {
+  background-color: #f0f4f8; /* powder blue */
+}
+
+.bg-mint {
+  background-color: #f0f9f4; /* soft mint */
+}
+

@@ -1,0 +1,39 @@
+.page {
+  padding: 1rem 0;
+}
+
+.title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: #111827;
+}
+
+.choresList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.choreCard {
+  padding: 1.25rem;
+}
+
+.choreName {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+.choreArea {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.empty {
+  text-align: center;
+  color: #9ca3af;
+  padding: 2rem;
+}
+
