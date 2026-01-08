@@ -22,7 +22,7 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
     };
 
     await db.households.add(household);
-    await this.offlineEngine.enqueue('CREATE_HOUSEHOLD', household);
+    await this.offlineEngine.enqueue('CREATE_HOUSEHOLD', household as unknown as Record<string, unknown>);
     return household;
   }
 
@@ -37,7 +37,8 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
 
   async getCurrentHousehold(): Promise<Household | null> {
     // For now, return the first household (single household support)
-    return db.households.toCollection().first() || null;
+    const household = await db.households.toCollection().first();
+    return household || null;
   }
 
   async listMembers(householdId: string): Promise<Member[]> {
@@ -70,7 +71,7 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
     };
 
     await db.choreTemplates.add(chore);
-    await this.offlineEngine.enqueue('CREATE_CHORE', chore);
+    await this.offlineEngine.enqueue('CREATE_CHORE', chore as unknown as Record<string, unknown>);
     return chore;
   }
 

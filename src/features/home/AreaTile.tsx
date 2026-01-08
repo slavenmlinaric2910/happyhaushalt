@@ -1,5 +1,4 @@
 import { Card } from '../../core/ui/Card';
-import { Chip } from '../../core/ui/Chip';
 import styles from './AreaTile.module.css';
 
 export type AreaStatus = 'good' | 'due-today' | 'overdue';
