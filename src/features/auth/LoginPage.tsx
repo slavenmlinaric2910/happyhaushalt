@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { Card } from '../../core/ui/Card';
 import { Button } from '../../core/ui/Button';
@@ -34,6 +35,9 @@ export function LoginPage() {
           >
             {isLoading ? 'Signing in...' : 'Continue with Google'}
           </Button>
+          <Link to="/onboarding" className={styles.tempLink}>
+            (Temp: Go to Onboarding)
+          </Link>
         </Card>
       </div>
     </div>

@@ -1,12 +1,14 @@
 import { createContext, useContext, ReactNode } from 'react';
 import { LocalDexieRepo } from '../../core/repos/LocalDexieRepo';
 import { SupabaseAuthRepo } from '../../core/repos/SupabaseAuthRepo';
-import type { AuthRepo } from '../../core/repos/interfaces';
+import { SupabaseHouseholdRepo } from '../../core/repos/SupabaseHouseholdRepo';
+import type { AuthRepo, HouseholdRepo } from '../../core/repos/interfaces';
 import { useOfflineEngineContext } from './OfflineEngineProvider';
 
 interface RepoContextValue {
   repo: LocalDexieRepo;
   authRepo: AuthRepo;
+  householdRepo: HouseholdRepo;
 }
 
 const RepoContext = createContext<RepoContextValue | null>(null);
@@ -15,9 +17,10 @@ export function RepoProvider({ children }: { children: ReactNode }) {
   const engine = useOfflineEngineContext();
   const repo = new LocalDexieRepo(engine);
   const authRepo = new SupabaseAuthRepo();
+  const householdRepo = new SupabaseHouseholdRepo();
 
   return (
-    <RepoContext.Provider value={{ repo, authRepo }}>
+    <RepoContext.Provider value={{ repo, authRepo, householdRepo }}>
       {children}
     </RepoContext.Provider>
   );
@@ -39,5 +42,14 @@ export function useAuthRepo(): AuthRepo {
     throw new Error('useAuthRepo must be used within RepoProvider');
   }
   return context.authRepo;
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useHouseholdRepo(): HouseholdRepo {
+  const context = useContext(RepoContext);
+  if (!context) {
+    throw new Error('useHouseholdRepo must be used within RepoProvider');
+  }
+  return context.householdRepo;
 }
 

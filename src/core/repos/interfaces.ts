@@ -14,8 +14,9 @@ export interface AuthRepo {
 }
 
 export interface HouseholdRepo {
-  createHousehold(data: { name: string }): Promise<Household>;
-  joinHousehold(joinCode: string): Promise<Household>;
+  createHousehold(name: string): Promise<Household>;
+  findByJoinCode(code: string): Promise<Household | null>;
+  joinByCode(code: string): Promise<Household>;
   getCurrentHousehold(): Promise<Household | null>;
   listMembers(householdId: string): Promise<Member[]>;
 }
