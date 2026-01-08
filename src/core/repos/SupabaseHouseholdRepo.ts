@@ -4,9 +4,19 @@ import type { HouseholdRepo } from './interfaces';
 import type { Household, Member } from '../types';
 
 /**
+ * Supabase household row type.
+ */
+interface SupabaseHouseholdRow {
+  id: string;
+  name: string;
+  join_code: string;
+  created_at: string;
+}
+
+/**
  * Maps a Supabase household row to a domain Household object.
  */
-function mapHousehold(row: any): Household {
+function mapHousehold(row: SupabaseHouseholdRow): Household {
   return {
     id: row.id,
     name: row.name,
