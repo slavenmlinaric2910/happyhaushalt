@@ -11,6 +11,7 @@ export function RepoProvider({ children }: { children: ReactNode }) {
   return <RepoContext.Provider value={repo}>{children}</RepoContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useRepo(): LocalDexieRepo {
   const context = useContext(RepoContext);
   if (!context) {
