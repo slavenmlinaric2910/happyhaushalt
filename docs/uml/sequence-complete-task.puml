@@ -1,0 +1,51 @@
+@startuml
+title HappyHaushalt — Sequence: Complete Task (Offline → Sync Online)
+
+actor User
+participant "UI (Today/Home)" as UI
+participant "TaskRepo (interface)" as TaskRepo
+participant "LocalDexieRepo" as LocalRepo
+database "DexieDB" as DB
+participant "OfflineEngine" as OE
+database "Outbox (Dexie)" as Outbox
+participant "SupabaseRemoteAdapter" as Remote
+participant "OfflineBanner" as Banner
+
+== User completes task while offline ==
+User -> UI: Tap "Done" on Task
+UI -> TaskRepo: completeTask(taskId)
+TaskRepo -> LocalRepo: completeTask(taskId)
+
+activate LocalRepo
+LocalRepo -> DB: update TaskInstance\nstatus=done, completedAt=now
+LocalRepo -> Outbox: enqueue OutboxOp(type=complete_task,\npayload={taskId,...}, status=pending)
+deactivate LocalRepo
+
+UI <-- TaskRepo: OK (optimistic)
+UI -> UI: Update list/status immediately
+
+UI -> Banner: show "Offline" (if not already)
+
+== Device comes back online ==
+OE -> OE: connectivity change detected (online)
+OE -> Banner: show "Syncing…"
+
+loop for each pending OutboxOp
+  OE -> Outbox: fetch next pending op
+  OE -> Outbox: mark op status=syncing
+  OE -> Remote: execute operation(op)
+  alt remote success
+    Remote --> OE: success
+    OE -> Outbox: mark op status=done
+  else remote failure
+    Remote --> OE: error
+    OE -> Outbox: mark op status=failed\nstore error message
+    OE -> Banner: show "Sync failed" + Retry
+  end
+end
+
+alt all ops done
+  OE -> Banner: hide syncing / show "Up to date"
+end
+
+@enduml
