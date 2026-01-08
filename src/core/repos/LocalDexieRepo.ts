@@ -13,10 +13,10 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
   constructor(private offlineEngine: OfflineEngine) {}
 
   // HouseholdRepo
-  async createHousehold(data: { name: string }): Promise<Household> {
+  async createHousehold(name: string): Promise<Household> {
     const household: Household = {
       id: generateId(),
-      name: data.name,
+      name,
       joinCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
       createdAt: new Date(),
     };
@@ -26,12 +26,17 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
     return household;
   }
 
-  async joinHousehold(joinCode: string): Promise<Household> {
-    const household = await db.households.where('joinCode').equals(joinCode).first();
+  async findByJoinCode(code: string): Promise<Household | null> {
+    const household = await db.households.where('joinCode').equals(code).first();
+    return household || null;
+  }
+
+  async joinByCode(code: string): Promise<Household> {
+    const household = await this.findByJoinCode(code);
     if (!household) {
-      throw new Error('Household not found');
+      throw new Error(`No household found with join code "${code}". Please check the code and try again.`);
     }
-    await this.offlineEngine.enqueue('JOIN_HOUSEHOLD', { joinCode });
+    await this.offlineEngine.enqueue('JOIN_HOUSEHOLD', { joinCode: code });
     return household;
   }
 

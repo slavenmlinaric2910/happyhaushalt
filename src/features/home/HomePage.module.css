@@ -20,6 +20,15 @@
   text-align: center;
 }
 
+.tempLink {
+  display: block;
+  margin: 1rem 0;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: #6b7280;
+  text-decoration: underline;
+}
+
 .areasSection {
   margin-top: 2rem;
 }

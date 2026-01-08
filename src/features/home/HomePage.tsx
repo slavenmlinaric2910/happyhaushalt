@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Settings, Plus } from 'lucide-react';
 import { IconButton } from '../../core/ui/IconButton';
 import { HouseMoodCard } from './HouseMoodCard';
@@ -47,6 +48,10 @@ export function HomePage() {
       </header>
 
       <HouseMoodCard status="good" message="All good — nothing overdue." />
+
+      <Link to="/onboarding" className={styles.tempLink}>
+        (Temp: Go to Onboarding)
+      </Link>
 
       <section className={styles.areasSection}>
         <h2 className={styles.areasHeader}>Areas</h2>
