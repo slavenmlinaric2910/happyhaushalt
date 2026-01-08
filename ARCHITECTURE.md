@@ -43,8 +43,6 @@ today/ # (optional) consolidated task list
 assets/
 illustrations/ # house mood + area illustrations (png/svg)
 
-markdown
-Copy code
 
 ## Data model (conceptual)
 Core entities:
