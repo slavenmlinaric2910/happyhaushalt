@@ -1,6 +1,7 @@
 import { db } from '../core/offline/db';
 import { generateId } from './utils';
 import type { Household, Member, ChoreTemplate, TaskInstance } from '../core/types';
+import type { AvatarId } from '../features/onboarding/avatars';
 
 const SEEDED_KEY = 'chores_seeded_v1';
 
@@ -27,16 +28,19 @@ export async function seedDemoData(): Promise<void> {
       id: generateId(),
       householdId: household.id,
       displayName: 'Alice',
+      avatarId: 'broom-buddy' as AvatarId,
     },
     {
       id: generateId(),
       householdId: household.id,
       displayName: 'Bob',
+      avatarId: 'vacuum-vroom' as AvatarId,
     },
     {
       id: generateId(),
       householdId: household.id,
       displayName: 'Charlie',
+      avatarId: 'sponge-pal' as AvatarId,
     },
   ];
 

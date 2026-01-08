@@ -201,6 +201,7 @@ export class SupabaseHouseholdRepo implements HouseholdRepo {
       id: row.id,
       householdId: row.household_id,
       displayName: row.display_name,
+      avatarId: row.avatar_id as import('../../features/onboarding/avatars').AvatarId,
     }));
   }
 }

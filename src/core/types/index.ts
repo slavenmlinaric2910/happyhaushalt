@@ -11,6 +11,7 @@ export interface Member {
   id: string;
   householdId: string;
   displayName: string;
+  avatarId: import('../../features/onboarding/avatars').AvatarId;
 }
 
 export interface ChoreTemplate {

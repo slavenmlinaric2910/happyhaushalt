@@ -34,3 +34,12 @@ export interface TaskRepo {
   regenerateTasksIfNeeded(householdId: string): Promise<void>;
 }
 
+export interface MemberRepo {
+  getCurrentMember(): Promise<Member | null>;
+  ensureMemberExists(args: {
+    householdId: string;
+    displayName: string;
+    avatarId: import('../../features/onboarding/avatars').AvatarId;
+  }): Promise<Member>;
+}
+
