@@ -68,7 +68,14 @@ export function HouseholdPage() {
               ) : (
                 members.map((member) => (
                   <Card key={member.id} className={styles.memberCard}>
-                    <p className={styles.memberName}>{member.displayName}</p>
+                    <div className={styles.memberContent}>
+                      <img
+                        src={`/avatars/${member.avatarId}.png`}
+                        alt={member.displayName}
+                        className={styles.memberAvatar}
+                      />
+                      <p className={styles.memberName}>{member.displayName}</p>
+                    </div>
                   </Card>
                 ))
               )}

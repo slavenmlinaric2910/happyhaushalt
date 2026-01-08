@@ -2,7 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OfflineEngineProvider } from './providers/OfflineEngineProvider';
 import { RepoProvider } from './providers/RepoProvider';
-import { AuthProvider, useAuth } from './providers/AuthProvider';
+import { AuthProvider } from './providers/AuthProvider';
+import { BootstrapGuard } from './components/BootstrapGuard';
 import { AppLayout } from './layout/AppLayout';
 import { HomePage } from '../features/home/HomePage';
 import { TodayPage } from '../features/today/TodayPage';
@@ -11,9 +12,6 @@ import { ChoreDetailPage } from '../features/chores/ChoreDetailPage';
 import { HouseholdPage } from '../features/household/HouseholdPage';
 import { OnboardingPage } from '../features/onboarding/OnboardingPage';
 import { LoginPage } from '../features/auth/LoginPage';
-import { LoadingView } from './components/LoadingView';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { PublicRoute } from './components/PublicRoute';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,46 +23,24 @@ const queryClient = new QueryClient({
 });
 
 function AppRoutes() {
-  const { loading } = useAuth();
-
-  if (loading) {
-    return <LoadingView />;
-  }
-
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <LoginPage />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/onboarding"
-        element={
-          <ProtectedRoute>
-            <OnboardingPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <AppLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Navigate to="/home" replace />} />
-        <Route path="home" element={<HomePage />} />
-        <Route path="today" element={<TodayPage />} />
-        <Route path="chores" element={<ChoresPage />} />
-        <Route path="chores/:id" element={<ChoreDetailPage />} />
-        <Route path="household" element={<HouseholdPage />} />
-      </Route>
-    </Routes>
+    <BootstrapGuard>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route
+          path="/"
+          element={<AppLayout />}
+        >
+          <Route index element={<Navigate to="/home" replace />} />
+          <Route path="home" element={<HomePage />} />
+          <Route path="today" element={<TodayPage />} />
+          <Route path="chores" element={<ChoresPage />} />
+          <Route path="chores/:id" element={<ChoreDetailPage />} />
+          <Route path="household" element={<HouseholdPage />} />
+        </Route>
+      </Routes>
+    </BootstrapGuard>
   );
 }
 
