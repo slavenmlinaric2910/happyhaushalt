@@ -1,108 +1,116 @@
-# ARCHITECTURE.md
 
-## Goal
-Build a calm, installable **offline-capable PWA** for household chores:
-- Minimal UI (Home/Areas, Chores, Household)
-- Offline-first (works without network; queues writes; syncs later)
-- Clean separation of concerns so features can be built independently
-
-## Tech stack
-- React + TypeScript + Vite
-- Routing: React Router
-- Data caching: TanStack Query (where useful)
-- Offline storage: Dexie (IndexedDB)
-- PWA: vite-plugin-pwa (Workbox)
-- Tests: Vitest + React Testing Library (+ Playwright smoke e2e)
-
-## High-level architecture (layers)
-
-**UI (screens/components)**
-→ **Feature hooks / view-model**
-→ **Repository interfaces (contract)**
-→ **Local store (Dexie) + OfflineEngine (outbox)**
-→ **Remote adapter** (stub now, real backend later)
-
-### Key rule
-**UI never talks directly to Dexie or remote APIs.**
-All data access goes through repositories.
-
-## Folder structure
-
-src/
-app/ # App shell, routing, providers, layout
-core/
-types/ # Domain types (Household, Member, ChoreTemplate, Task, OfflineOp)
-repos/ # Repo interfaces + implementations
-offline/ # Dexie schema, OfflineEngine, connectivity, outbox/sync
-ui/ # Shared UI primitives (Card, Chip, IconButton, Fab)
-features/
-home/ # Home page (mood card + area tiles)
-chores/ # Chore templates list + edit/create
-household/ # Members + join code + settings
-today/ # (optional) consolidated task list
-assets/
-illustrations/ # house mood + area illustrations (png/svg)
-
+---
 
 ## Data model (conceptual)
-Core entities:
-- **Household**: id, name, joinCode
-- **Member**: id, householdId, displayName
-- **ChoreTemplate**: id, householdId, name, area, frequency, rotationCursor, archived
-- **TaskInstance**: id, householdId, choreTemplateId, dueDate, assignedMemberId, status, completedAt
-- **OutboxOp**: queued offline operation (type, payload, status, error)
 
-## Repositories (contracts)
-Repositories define the stable API for features.
+Core entities:
+- **User** (Supabase Auth): id (uuid), email, provider info
+- **Household**: id, name, joinCode (unique), createdAt
+- **Member**: id, householdId, userId (auth user), displayName, avatarId, createdAt
+- **ChoreTemplate**: id, householdId, name, area, frequency, checklistItems?, rotationCursor, archived
+- **TaskInstance**: id, householdId, choreTemplateId, dueDate, assignedMemberId, status, completedAt
+- **OutboxOp**: id, type, payload, status (pending|syncing|failed|done), error?, createdAt
+
+### Relationship summary
+- Household 1..* Members
+- Household 1..* ChoreTemplates
+- Household 1..* TaskInstances
+- Member belongs to exactly one Household in MVP
+- Member is linked to exactly one Supabase User via userId
+
+---
+
+## Repository layer (contracts)
+
+Repositories define stable APIs for features and hide storage details.
 
 Typical interfaces:
-- `HouseholdRepo`: create/join/getCurrent/listMembers
-- `ChoreRepo`: list/create/update/archive
-- `TaskRepo`: listTasks(range), completeTask(id), regenerateTasksIfNeeded()
+- `AuthRepo`:
+  - `signInWithGoogle()`, `signOut()`, `getSession()`, `onAuthStateChange()`
+- `HouseholdRepo`:
+  - `createHousehold(name)`, `joinByCode(code)`, `getCurrentHousehold()`
+  - `getJoinCode()`, `listMembers()`
+- `MemberRepo`:
+  - `getCurrentMember()`, `ensureMemberExists()`, `updateProfile({displayName, avatarId})`
+- `ChoreRepo`:
+  - `listTemplates()`, `getTemplate(id)`, `createTemplate(dto)`, `updateTemplate(id,dto)`, `archiveTemplate(id)`
+- `TaskRepo`:
+  - `listTasks(filter)`, `completeTask(taskId)`, `regenerateIfNeeded()`
 
-**LocalDexieRepo** implements these contracts using Dexie.
-A **RemoteRepoAdapter** may exist (stub now), used by the OfflineEngine during sync.
+### Implementations
+- Local implementations persist/read via Dexie (offline source of truth per device)
+- Remote implementations call Supabase (used by sync and/or initial hydration)
+- Feature code only depends on repo interfaces, never on Dexie/Supabase directly
+
+---
 
 ## OfflineEngine (outbox + sync)
-Purpose: support offline writes without breaking UX.
+
+Purpose: enable offline writes with reliable later synchronization.
+
+### States
+- `pending`: queued locally
+- `syncing`: being processed
+- `failed`: needs retry (shows in UI)
+- `done`: successfully synced
 
 ### Behavior
 - When **offline**:
-  - Apply optimistic change locally (Dexie)
-  - Enqueue an `OutboxOp` (pending)
+  - Apply local changes immediately (Dexie)
+  - Enqueue `OutboxOp` as `pending`
 - When **online**:
   - Process outbox sequentially
-  - Call remote adapter (stub/real)
-  - Mark ops as done or failed
-  - Expose queue state to the UI (OfflineBanner)
+  - Execute remote operation (Supabase adapter)
+  - Mark op `done` or `failed`
+  - Expose engine state to UI
 
 ### UI integration
-A global `OfflineBanner` shows:
+Global `OfflineBanner` shows:
 - Offline mode
 - Syncing…
-- Sync failed (Retry)
+- Sync failed + Retry button
 
-## Feature isolation (how to work in parallel)
-- Features live in `src/features/<feature>/`.
-- Features may create their own components/hooks but must depend only on:
+---
+
+## PWA strategy (installable + caching)
+- `vite-plugin-pwa` generates service worker and manifest
+- Cache strategy focuses on:
+  - static assets (app shell, icons, illustrations, avatars)
+  - navigation fallback for SPA routes
+- Offline data lives in Dexie; service worker caching is for app shell and assets
+- Update behavior: show a lightweight “Update available” hint if needed (optional)
+
+---
+
+## Feature isolation (parallel work)
+- Each feature lives in `src/features/<feature>/`
+- Features may create components/hooks but must only depend on:
   - `core/types`
   - `core/repos` (interfaces)
   - `core/ui`
-- Any change to `src/core/**` should be minimal and requires owner review.
+- Changes to `src/core/**`, `src/app/**`, and config files require owner review (CODEOWNERS)
+
+---
 
 ## UI design principles (summary)
 - Card-based layout, large radius, subtle shadows
 - Calm pastel tile backgrounds
-- Minimal chips/dots for status
-- No gamification (no points, streaks, rewards)
+- Minimal status indicators (dots/chips)
+- No gamification visuals (no points/streaks)
+- Illustrations used sparingly (home mood, areas, empty states)
 
-## Extending the backend later
-We can swap the RemoteRepoAdapter to Supabase/Firebase without rewriting UI:
+---
+
+## Extending backend later
+This architecture supports swapping/expanding storage without rewriting UI:
 - Keep repo method signatures stable
 - Keep mapping logic inside `core/repos/*`
-- Keep sync logic in `core/offline/*`
+- Keep sync logic inside `core/offline/*`
+
+---
 
 ## Non-goals
-- No complex gamification
-- No full calendar scheduling engine in MVP
-- No multi-household management unless required
+- Multi-household switching (MVP)
+- Complex calendar scheduling
+- Custom avatar uploads
+- Advanced permissions beyond basic ownership
