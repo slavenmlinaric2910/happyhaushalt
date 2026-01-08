@@ -4,6 +4,14 @@ import type {
   ChoreTemplate,
   TaskInstance,
 } from '../types';
+import type { Session } from '@supabase/supabase-js';
+
+export interface AuthRepo {
+  signInWithGoogle(): Promise<void>;
+  signOut(): Promise<void>;
+  getSession(): Promise<Session | null>;
+  onAuthStateChange(handler: (session: Session | null) => void): () => void;
+}
 
 export interface HouseholdRepo {
   createHousehold(data: { name: string }): Promise<Household>;
