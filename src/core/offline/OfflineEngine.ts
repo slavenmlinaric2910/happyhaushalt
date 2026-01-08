@@ -105,10 +105,12 @@ export class OfflineEngine {
         await this.remoteRepo.archiveChore(op.payload.id as string);
         break;
       case 'CREATE_HOUSEHOLD':
-        await this.remoteRepo.createHousehold(op.payload as unknown as Parameters<typeof this.remoteRepo.createHousehold>[0]);
+        // Payload contains the full household object, extract name
+        const householdPayload = op.payload as unknown as Household;
+        await this.remoteRepo.createHousehold(householdPayload.name);
         break;
       case 'JOIN_HOUSEHOLD':
-        await this.remoteRepo.joinHousehold(op.payload.joinCode as string);
+        await this.remoteRepo.joinByCode(op.payload.joinCode as string);
         break;
       default:
         throw new Error(`Unknown operation type: ${(op as OfflineOp).type}`);

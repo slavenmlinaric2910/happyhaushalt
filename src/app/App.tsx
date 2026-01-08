@@ -9,6 +9,7 @@ import { TodayPage } from '../features/today/TodayPage';
 import { ChoresPage } from '../features/chores/ChoresPage';
 import { ChoreDetailPage } from '../features/chores/ChoreDetailPage';
 import { HouseholdPage } from '../features/household/HouseholdPage';
+import { OnboardingPage } from '../features/onboarding/OnboardingPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { LoadingView } from './components/LoadingView';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -38,6 +39,14 @@ function AppRoutes() {
           <PublicRoute>
             <LoginPage />
           </PublicRoute>
+        }
+      />
+      <Route
+        path="/onboarding"
+        element={
+          <ProtectedRoute>
+            <OnboardingPage />
+          </ProtectedRoute>
         }
       />
       <Route

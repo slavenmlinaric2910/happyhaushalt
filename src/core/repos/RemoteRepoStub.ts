@@ -7,20 +7,20 @@ import { logger } from '../../lib/logger';
 // Stub implementation that simulates a remote backend
 // In production, this would make actual HTTP requests
 export class RemoteRepoStub {
-  async createHousehold(data: { name: string; joinCode: string }): Promise<Household> {
-    logger.log('[Remote] createHousehold', data);
+  async createHousehold(name: string): Promise<Household> {
+    logger.log('[Remote] createHousehold', name);
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 300));
     return {
       id: `remote-${Date.now()}`,
-      name: data.name,
-      joinCode: data.joinCode,
+      name,
+      joinCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
       createdAt: new Date(),
     };
   }
 
-  async joinHousehold(joinCode: string): Promise<Household> {
-    logger.log('[Remote] joinHousehold', joinCode);
+  async joinByCode(code: string): Promise<Household> {
+    logger.log('[Remote] joinByCode', code);
     await new Promise((resolve) => setTimeout(resolve, 300));
     // In real implementation, this would fetch from server
     throw new Error('Not implemented in stub');
