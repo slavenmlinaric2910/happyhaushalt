@@ -1,0 +1,46 @@
+# .gitlab/CODEOWNERS
+# Replace @OWNER with your GitLab username (e.g., @ownzie)
+# Replace @TEAMMATE_X later if you want ownership per feature folder.
+
+# --- Core / Platform (Owner required) ---
+/src/core/                @ownzie
+/src/app/                 @ownzie
+/src/lib/                 @ownzie
+
+# --- Build / tooling / project config (Owner required) ---
+/package.json              @ownzie
+/package-lock.json         @ownzie
+/pnpm-lock.yaml            @ownzie
+/yarn.lock                 @ownzie
+/vite.config.*             @ownzie
+/tsconfig*.json            @ownzie
+/vitest.config.*           @ownzie
+/playwright.config.*       @ownzie
+/.eslintrc*                @ownzie
+/eslint.config.*           @ownzie
+/.prettierrc*              @ownzie
+/.prettierignore           @ownzie
+/.editorconfig             @ownzie
+/.gitignore                @ownzie
+/.gitlab-ci.yml            @ownzie
+/.gitlab/                  @ownzie
+/.cursor/                  @ownzie
+
+# --- Docs (Owner by default, change if you want) ---
+/README.md                 @ownzie
+/ARCHITECTURE.md           @ownzie
+/CONTRIBUTING.md           @ownzie
+
+# --- Public assets (Owner by default; loosen later if desired) ---
+/public/                   @OWNER
+/src/assets/               @OWNER
+
+# --- Features (optional ownership; leave open for now) ---
+# If later you want teammates to own their feature folders, uncomment and set:
+# /src/features/home/       @TEAMMATE_HOME
+# /src/features/chores/     @TEAMMATE_CHORES
+# /src/features/household/  @TEAMMATE_HOUSEHOLD
+# /src/features/today/      @TEAMMATE_TODAY
+
+# Default fallback (optional):
+# *                         @OWNER
