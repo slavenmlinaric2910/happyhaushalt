@@ -23,6 +23,7 @@ function mapMember(row: SupabaseMemberRow): Member {
     householdId: row.household_id,
     displayName: row.display_name,
     avatarId: row.avatar_id as AvatarId,
+    userId: row.user_id,
   };
 }
 
@@ -64,6 +65,26 @@ export class SupabaseMemberRepo implements MemberRepo {
     }
 
     return mapMember(memberData);
+  }
+
+  /**
+   * Lists all members of a household.
+   */
+  async listMembersByHousehold(householdId: string): Promise<Member[]> {
+    const { data, error } = await supabase
+      .from('members')
+      .select('*')
+      .eq('household_id', householdId);
+
+    if (error) {
+      throw new Error(`Failed to list members: ${error.message}`);
+    }
+
+    if (!data) {
+      return [];
+    }
+
+    return data.map(mapMember);
   }
 
   /**

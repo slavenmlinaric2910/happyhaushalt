@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase/client';
 import { generateJoinCode } from '../../lib/joinCode';
-import type { HouseholdRepo } from './interfaces';
+import type { HouseholdRepo, MemberRepo } from './interfaces';
 import type { Household, Member } from '../types';
 
 /**
@@ -11,6 +11,7 @@ interface SupabaseHouseholdRow {
   name: string;
   join_code: string;
   created_at: string;
+  created_by?: string;
 }
 
 /**
@@ -22,10 +23,13 @@ function mapHousehold(row: SupabaseHouseholdRow): Household {
     name: row.name,
     joinCode: row.join_code,
     createdAt: new Date(row.created_at),
+    createdBy: row.created_by,
   };
 }
 
 export class SupabaseHouseholdRepo implements HouseholdRepo {
+  constructor(private memberRepo: MemberRepo) {}
+
   /**
    * Creates a new household with a generated join code.
    * Retries up to 3 times if the join code collides with an existing one.
@@ -124,46 +128,19 @@ export class SupabaseHouseholdRepo implements HouseholdRepo {
 
   /**
    * Gets the current household for the authenticated user.
-   * For now, returns the first household the user is a member of.
+   * Reads current member via MemberRepo, then fetches household by member.household_id.
    */
   async getCurrentHousehold(): Promise<Household | null> {
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-
-    if (sessionError) {
-      throw new Error(`Failed to get session: ${sessionError.message}`);
-    }
-
-    if (!session?.user) {
-      return null;
-    }
-
-    // Get household through members table
-    const { data: memberData, error: memberError } = await supabase
-      .from('members')
-      .select('household_id')
-      .eq('user_id', session.user.id)
-      .limit(1)
-      .single();
-
-    if (memberError) {
-      if (memberError.code === 'PGRST116') {
-        // No member record found
-        return null;
-      }
-      throw new Error(`Failed to get current household: ${memberError.message}`);
-    }
-
-    if (!memberData) {
+    const member = await this.memberRepo.getCurrentMember();
+    
+    if (!member) {
       return null;
     }
 
     const { data: householdData, error: householdError } = await supabase
       .from('households')
       .select('*')
-      .eq('id', memberData.household_id)
+      .eq('id', member.householdId)
       .single();
 
     if (householdError) {
@@ -182,27 +159,10 @@ export class SupabaseHouseholdRepo implements HouseholdRepo {
 
   /**
    * Lists all members of a household.
+   * Delegates to MemberRepo for consistency.
    */
   async listMembers(householdId: string): Promise<Member[]> {
-    const { data, error } = await supabase
-      .from('members')
-      .select('*')
-      .eq('household_id', householdId);
-
-    if (error) {
-      throw new Error(`Failed to list members: ${error.message}`);
-    }
-
-    if (!data) {
-      return [];
-    }
-
-    return data.map((row) => ({
-      id: row.id,
-      householdId: row.household_id,
-      displayName: row.display_name,
-      avatarId: row.avatar_id as import('../../features/onboarding/avatars').AvatarId,
-    }));
+    return this.memberRepo.listMembersByHousehold(householdId);
   }
 }
 

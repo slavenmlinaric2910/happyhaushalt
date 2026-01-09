@@ -36,6 +36,7 @@ export interface TaskRepo {
 
 export interface MemberRepo {
   getCurrentMember(): Promise<Member | null>;
+  listMembersByHousehold(householdId: string): Promise<Member[]>;
   ensureMemberExists(args: {
     householdId: string;
     displayName: string;
