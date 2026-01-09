@@ -19,8 +19,8 @@ export function RepoProvider({ children }: { children: ReactNode }) {
   const engine = useOfflineEngineContext();
   const repo = new LocalDexieRepo(engine);
   const authRepo = new SupabaseAuthRepo();
-  const householdRepo = new SupabaseHouseholdRepo();
   const memberRepo = new SupabaseMemberRepo();
+  const householdRepo = new SupabaseHouseholdRepo(memberRepo);
 
   return (
     <RepoContext.Provider value={{ repo, authRepo, householdRepo, memberRepo }}>
