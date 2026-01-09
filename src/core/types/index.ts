@@ -5,6 +5,7 @@ export interface Household {
   name: string;
   joinCode: string;
   createdAt: Date;
+  createdBy?: string; // user_id of the creator
 }
 
 export interface Member {
@@ -12,6 +13,7 @@ export interface Member {
   householdId: string;
   displayName: string;
   avatarId: import('../../features/onboarding/avatars').AvatarId;
+  userId?: string; // user_id from Supabase, used to identify owner
 }
 
 export interface ChoreTemplate {
