@@ -4,8 +4,10 @@
   padding-top: 2rem;
   max-width: 420px;
   margin: 0 auto;
-  overflow-x: hidden;
-  min-height: 100vh;
+   /* important */
+   height: 100dvh;         /* better than 100vh on mobile */
+   overflow: hidden;       /* kill vertical scroll */
+   overscroll-behavior: none;
   box-sizing: border-box;
 }
 

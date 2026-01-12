@@ -10,8 +10,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
     "test": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:e2e": "playwright test",
-    "generate-icons": "node scripts/generate-pwa-icons.js"
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.90.0",

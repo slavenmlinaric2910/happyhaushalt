@@ -12,9 +12,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: #f6f3ef; /* warm off-white / paper */
   color: #111827;
+  overflow: hidden; /* prevents the whole page from scrolling */
+  overscroll-behavior: none;
 }
 
 #root {
   min-height: 100vh;
+  height: 100%;
 }
 
