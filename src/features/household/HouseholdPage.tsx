@@ -64,7 +64,7 @@ export function HouseholdPage() {
       <div className={styles.page}>
         <header className={styles.header}>
           <div>
-            <h1 className={styles.title}>Household</h1>
+            <h1 className={styles.title}>{household?.name}</h1>
             <div className={styles.skeleton} style={{ width: '150px', height: '16px', marginTop: '0.5rem' }} />
           </div>
           <div className={styles.skeleton} style={{ width: '64px', height: '64px', borderRadius: '8px' }} />
@@ -137,7 +137,7 @@ export function HouseholdPage() {
       {/* Header with title and metadata */}
       <header className={styles.header}>
         <div className={styles.headerText}>
-          <h1 className={styles.title}>Household</h1>
+          <h1 className={styles.title}>{household.name}</h1>
           <p className={styles.metadata}>
             {members.length} {members.length === 1 ? 'member' : 'members'} • Created by {creatorName}
           </p>
