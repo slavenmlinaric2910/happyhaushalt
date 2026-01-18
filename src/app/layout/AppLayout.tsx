@@ -1,11 +1,10 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import { ListTodo, Plus, Users } from 'lucide-react';
 import { OfflineBanner } from '../../core/ui/OfflineBanner';
 import styles from './AppLayout.module.css';
 
 export function AppLayout() {
   const location = useLocation();
-  const navigate = useNavigate();
 
   const navItems = [
     { path: '/tasks', icon: ListTodo, label: 'Tasks' },
