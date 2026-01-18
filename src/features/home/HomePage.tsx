@@ -1,5 +1,4 @@
-import { Link } from 'react-router-dom';
-import { Settings, Plus, CheckCircle2, Circle } from 'lucide-react';
+import { Settings, CheckCircle2, Circle } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRepo } from '../../app/providers/RepoProvider';
 import { IconButton } from '../../core/ui/IconButton';
