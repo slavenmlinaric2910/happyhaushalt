@@ -25,14 +25,14 @@
 }
 
 .fab {
-  background-color: #f5f5f0; /* muted beige */
-  color: #374151;
+  background-color: #14b8a6; /* teal/green as shown in concept */
+  color: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border-radius: 50%;
 }
 
 .fab:hover:not(:disabled) {
-  background-color: #e8e8e0;
+  background-color: #0d9488;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
