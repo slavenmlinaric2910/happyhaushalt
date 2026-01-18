@@ -3,10 +3,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OfflineEngineProvider } from './providers/OfflineEngineProvider';
 import { RepoProvider } from './providers/RepoProvider';
 import { AuthProvider } from './providers/AuthProvider';
+import { CreateTaskSheetProvider } from './providers/CreateTaskSheetProvider';
 import { BootstrapGuard } from './components/BootstrapGuard';
 import { AppLayout } from './layout/AppLayout';
 import { HomePage } from '../features/home/HomePage';
 import { TodayPage } from '../features/today/TodayPage';
+import { TasksPage } from '../features/tasks/TasksPage';
 import { ChoresPage } from '../features/chores/ChoresPage';
 import { ChoreDetailPage } from '../features/chores/ChoreDetailPage';
 import { HouseholdPage } from '../features/household/HouseholdPage';
@@ -32,9 +34,10 @@ function AppRoutes() {
           path="/"
           element={<AppLayout />}
         >
-          <Route index element={<Navigate to="/home" replace />} />
+          <Route index element={<Navigate to="/tasks" replace />} />
           <Route path="home" element={<HomePage />} />
-          <Route path="today" element={<TodayPage />} />
+          <Route path="today" element={<Navigate to="/tasks" replace />} />
+          <Route path="tasks" element={<TasksPage />} />
           <Route path="chores" element={<ChoresPage />} />
           <Route path="chores/:id" element={<ChoreDetailPage />} />
           <Route path="household" element={<HouseholdPage />} />
@@ -51,7 +54,9 @@ export function App() {
         <RepoProvider>
           <AuthProvider>
             <BrowserRouter>
-              <AppRoutes />
+              <CreateTaskSheetProvider>
+                <AppRoutes />
+              </CreateTaskSheetProvider>
             </BrowserRouter>
           </AuthProvider>
         </RepoProvider>

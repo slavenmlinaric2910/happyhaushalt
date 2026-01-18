@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Settings, Plus } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { IconButton } from '../../core/ui/IconButton';
 import { HouseMoodCard } from './HouseMoodCard';
 import { AreaTile } from './AreaTile';
@@ -68,16 +68,6 @@ export function HomePage() {
           ))}
         </div>
       </section>
-
-      <div className={styles.fabContainer}>
-        <IconButton
-          icon={<Plus size={24} />}
-          variant="fab"
-          size="lg"
-          aria-label="Add new"
-          className={styles.fab}
-        />
-      </div>
     </div>
   );
 }

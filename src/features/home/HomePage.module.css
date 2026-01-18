@@ -1,6 +1,6 @@
 .page {
   padding: 1.25rem 1.25rem;
-  padding-bottom: 5rem; /* Space for FAB */
+  padding-bottom: 5rem; /* Space for bottom nav */
   max-width: 420px;
   margin: 0 auto;
 }
@@ -44,25 +44,4 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
-}
-
-.fabContainer {
-  position: fixed;
-  bottom: 5rem; /* Above bottom nav */
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 50;
-  max-width: 420px;
-  width: calc(100% - 2.5rem);
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.fabContainer > * {
-  pointer-events: auto;
-}
-
-.fab {
-  /* Additional FAB styling if needed */
 }

@@ -1,15 +1,16 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Calendar, ListTodo, Users } from 'lucide-react';
+import { Calendar, Plus, Users } from 'lucide-react';
 import { OfflineBanner } from '../../core/ui/OfflineBanner';
+import { IconButton } from '../../core/ui/IconButton';
+import { useCreateTaskSheet } from '../providers/CreateTaskSheetProvider';
 import styles from './AppLayout.module.css';
 
 export function AppLayout() {
   const location = useLocation();
+  const { openSheet } = useCreateTaskSheet();
 
   const navItems = [
-    { path: '/home', icon: Home, label: 'Home' },
-    { path: '/today', icon: Calendar, label: 'Today' },
-    { path: '/chores', icon: ListTodo, label: 'Chores' },
+    { path: '/tasks', icon: Calendar, label: 'Tasks' },
     { path: '/household', icon: Users, label: 'Household' },
   ];
 
@@ -20,20 +21,44 @@ export function AppLayout() {
         <Outlet />
       </main>
       <nav className={styles.nav}>
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`${styles.navItem} ${isActive ? styles.active : ''}`}
-            >
-              <Icon size={20} />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+        {/* Tasks - Left */}
+        <Link
+          to="/tasks"
+          className={`${styles.navItem} ${
+            location.pathname === '/tasks' || location.pathname.startsWith('/tasks/') ? styles.active : ''
+          }`}
+        >
+          <Calendar size={20} />
+          <span>Tasks</span>
+        </Link>
+
+        {/* FAB - Center */}
+        <div className={styles.fabWrapper}>
+          <IconButton
+            icon={<Plus size={24} />}
+            variant="fab"
+            size="lg"
+            type="button"
+            aria-label="Add new"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              openSheet();
+            }}
+            className={styles.navFab}
+          />
+        </div>
+
+        {/* Household - Right */}
+        <Link
+          to="/household"
+          className={`${styles.navItem} ${
+            location.pathname === '/household' || location.pathname.startsWith('/household/') ? styles.active : ''
+          }`}
+        >
+          <Users size={20} />
+          <span>Household</span>
+        </Link>
       </nav>
     </div>
   );
