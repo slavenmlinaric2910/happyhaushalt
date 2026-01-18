@@ -1,10 +1,13 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { ListTodo, Plus, Users } from 'lucide-react';
+import { ListTodo, Users } from 'lucide-react';
+import { useState } from 'react';
 import { OfflineBanner } from '../../core/ui/OfflineBanner';
+import { CreateModal } from '../../core/ui/CreateModal';
 import styles from './AppLayout.module.css';
 
 export function AppLayout() {
   const location = useLocation();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const navItems = [
     { path: '/tasks', icon: ListTodo, label: 'Tasks' },
@@ -12,8 +15,15 @@ export function AppLayout() {
   ];
 
   const handleCreateTask = () => {
-    // TODO: Implement create task modal/dialog
     console.log('Create new task');
+    setIsCreateModalOpen(false);
+    // TODO: Navigate to create task form
+  };
+
+  const handleCreateChore = () => {
+    console.log('Create new chore');
+    setIsCreateModalOpen(false);
+    // TODO: Navigate to create chore form
   };
 
   return (
@@ -33,11 +43,11 @@ export function AppLayout() {
               <>
                 <button
                   key="create"
-                  onClick={handleCreateTask}
+                  onClick={() => setIsCreateModalOpen(true)}
                   className={styles.navItemCreate}
                   aria-label="Create task"
                 >
-                  <Plus size={28} />
+                  <span className={styles.plusIcon}>+</span>
                 </button>
                 <Link
                   key={item.path}
@@ -63,6 +73,12 @@ export function AppLayout() {
           );
         })}
       </nav>
+      <CreateModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreateTask={handleCreateTask}
+        onCreateChore={handleCreateChore}
+      />
     </div>
   );
 }
