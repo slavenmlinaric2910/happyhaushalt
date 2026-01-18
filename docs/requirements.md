@@ -1,215 +1,302 @@
-# Requirements Catalog — HappyHaushalt (Offline PWA)
+# 1. Projektmerkmale (HappyHaushalt)
 
-This document defines the functional and non-functional requirements for the project prototype.
-It is intentionally **small and realistic** to fit the semester scope and enable a working prototype.  
-(Requirement catalog: functional + non-functional is required by the assignment.)
+## 1.1 Zweck des Produkts
 
-## 1. Scope / Goal
+HappyHaushalt soll es ermöglichen, wiederkehrende Haushaltsaufgaben in WGs/Haushalten einfach zu planen, sichtbar zu machen und fair zu verteilen (Rotation), damit weniger Abstimmungsaufwand entsteht und Aufgaben zuverlässig erledigt werden – auch offline via installierbarer PWA.
 
-HappyHaushalt is a mobile-first **installable Progressive Web App (PWA)** for small households/WGs to manage recurring chores with a calm UI and **offline-first** behavior.
+## 1.2 Kunden, Beteiligte, Betroffene
 
-Primary goals:
-- Keep chores organized by area (kitchen, bathroom, living room, general)
-- Make it easy to see what’s due and complete tasks
-- Work reliably even without internet (offline queue + later sync)
-- Provide **very simple login** (Google OAuth) so every household member can use the app on their own phone
-- Provide a **one-time onboarding** (create/join household) and then go straight to Home on future app opens
-- Allow light personalization via member profile (name + pre-made avatar)
+Kunde/Auftraggeber: Projektteam bzw. Lehrveranstaltung (Mobile Software Engineering); fachlich: WG/Haushalt als "Kunde".
 
-## 2. Personas (minimal)
+Profiteure: WG-Mitglieder/Haushaltsmitglieder, die Aufgaben transparent und fair organisieren wollen.
 
-- **Member**: does chores, completes tasks, wants quick overview (“what’s due for me?”)
-- **Household Creator (light admin)**: creates household, shares join code/pin
+Beteiligte: Entwicklerteam (Konzeption, Umsetzung, Tests, Dokumentation), Endnutzer (Feedback/Testing).
 
-## 3. Assumptions
+Betroffene: alle Mitglieder eines Haushalts (Änderungen an Aufgaben/Rotation betreffen alle); indirekt ggf. Mitbewohner/Gäste, wenn Aufgabenverteilung und Sauberkeitsstatus kommuniziert wird.
 
-- Prototype scope: **one household, multiple users, multiple devices** (each member logs in on their own phone and joins the same household via a join code/pin).
-- Authentication uses **Supabase Auth with Google OAuth** (simple sign-in; no passwords managed by us).
-- On first login, a **Member is auto-created with defaults** (displayName + avatarId), then the user can optionally complete profile.
-- **No multiple households per user** for MVP (a user belongs to at most one household).
-- Household join code/pin must be **unique** within the system (unique enough for the prototype).
-- After successful join/create, the app persists the user’s household membership so users **do not need to enter the code again** on future launches.
-- Offline data is stored locally per device (Dexie) and syncs when the device is online.
+## 1.3 Nutzer des Produkts (Rollen)
 
-## 4. Out of Scope (explicit)
+Haushaltsmitglied (Standardrolle): anmelden (Google OAuth), Haushalt erstellen/beitreten, Profil (Name/Avatar) wählen, Aufgaben ansehen, Aufgaben abschließen, Chore-Templates anlegen/bearbeiten (im MVP für alle erlaubt).
 
-- No gamification (points, streaks, leaderboards)
-- No complex calendar engine (simple due dates only)
-- No payments, inventory, chat, or advanced role management
-- No complex RBAC/roles (beyond basic household ownership needs)
-- No multi-household switching for MVP
-- No custom avatar upload/cropping (only pre-made avatars)
+Haushalts-Owner/Ersteller: wie Standardrolle, zusätzlich "Owner"-Markierung; kann später optional Sonderrechte bekommen (z. B. Haushalt löschen/Member entfernen), ist im MVP aber nicht zwingend funktional getrennt.
 
----
+# 2. Randbedingungen an das Produkt (HappyHaushalt)
 
-## 5. Functional Requirements (FR)
+## 2.1 Vorgegebene Randbedingungen an das Projekt
 
-Format:
-- **FR-XX** — Requirement statement (with MoSCoW)
-- **Done when** — measurable acceptance criteria
+Projektform: Gruppenprojekt im Modul Mobile Software Engineering (Umsetzung als lauffähiger Prototyp inkl. Dokumentation/UML).
 
-### Authentication & Onboarding
+Plattform/Technik: Umsetzung als Progressive Web App (PWA) mit Fokus auf Mobile UX (installierbar, responsiv).
 
-**FR-01 (Must Have)** — Sign in / sign out (Google OAuth via Supabase Auth)  
-**Done when:** A user can sign in and sign out using Google OAuth and the app shows logged-in vs logged-out state.
+Offline-Fähigkeit: Offline-First ist eine zentrale Vorgabe/Designentscheidung (Nutzung auch ohne stabile Internetverbindung).
 
-**FR-02 (Must Have)** — Persist session across app restarts  
-**Done when:** After refreshing or reopening the app, the user remains signed in until they sign out.
+Technologie-Stack (festgelegt):
 
-**FR-03 (Must Have)** — First-time onboarding: Create or Join Household  
-**Done when:** After login, if the user has no household membership, they are shown a simple screen with two actions:
-- Create Household
-- Join Household (enter code)
+- Frontend: React + TypeScript + Vite
+- PWA: Workbox / vite-plugin-pwa
+- Offline-Persistenz: IndexedDB via Dexie
+- Auth/Backend: Supabase (Google OAuth, Postgres)
+- Tests: Vitest/RTL, optional Playwright (Smoke)
 
-**FR-04 (Must Have)** — Auto-create Member on first login (with defaults)  
-**Done when:** On first successful login, if no Member exists for this user identity, the system creates a Member record automatically with:
-- default displayName (from Google profile or fallback)
-- default avatarId (e.g., avatar-01)
+Organisation: Arbeit im Team mit Tickets/Board (z. B. GitLab), Code Reviews/Branching nach Konvention.
 
-**FR-05 (Should Have)** — One-time Member profile setup (name + avatar)  
-**Done when:** After first login (or if profile incomplete), the user can:
-- edit their displayName
-- choose 1 of 10 pre-made avatars  
-The screen is shown only once and does not reappear after completion (unless user resets profile).
+## 2.2 Namenskonventionen und Definitionen (Glossar)
 
-**FR-06 (Must Have)** — Remember household membership (no repeated code entry)  
-**Done when:** After a user creates/joins a household once, reopening the app takes them directly to Home (no code prompt again), unless they sign out.
+**Household (Haushalt)**: Eine gemeinsame Gruppe (z. B. WG), in der Aufgaben organisiert werden.
 
-**FR-07 (Should Have)** — Offline-friendly auth UX  
-**Done when:** If the user is offline, the app shows a clear message that sign-in requires connectivity, while already signed-in users can still use offline features.
+**Join Code**: Ein 6-stelliger Code (z. B. K7P2QX) zum Beitritt in einen Haushalt.
 
-### Household & Members
+**Member (Mitglied)**: Ein Nutzerkonto innerhalb eines Haushalts (authentifiziert via Supabase), mit display_name und avatar_id.
 
-**FR-08 (Must Have)** — Create household with unique join code/pin  
-**Done when:** A logged-in user can create a household and the system generates a join code/pin that is unique (for the prototype). The join code is visible in the Household page.
+**Chore Template (Aufgaben-Template)**: Wiederkehrende Aufgabe als Vorlage (Name, Bereich/Area, Frequenz, optional Checkliste).
 
-**FR-09 (Must Have)** — Join household by code (verification)  
-**Done when:** A logged-in user can enter a join code, the code is verified, and on success the user is linked to the household and redirected to Home.
+**Task / Task Instance**: Konkrete, fällige Ausprägung eines Templates (Due Date, Assigned Member, Status, CompletedAt).
 
-**FR-10 (Must Have)** — View household members  
-**Done when:** The Household page lists members (at least displayName + avatar) loaded via the repository layer.
+**Rotation (Round-Robin)**: Regel zur fairen Zuweisung: nach Abschluss wird die nächste Aufgabe dem nächsten Mitglied zugeordnet.
 
-**FR-11 (Should Have)** — Copy join code  
-**Done when:** A “Copy” action exists for the join code and shows success feedback (toast/snackbar or inline message).
+**Offline Outbox / OfflineOp**: Warteschlange lokaler Änderungen, die offline entstehen und später synchronisiert werden.
 
-**FR-12 (Could Have)** — Edit member profile later  
-**Done when:** A user can change displayName and avatar from the Household/settings page.
+**Repository (Repo-Pattern im Code)**: Abstraktionsschicht für Datenzugriff; UI greift nicht direkt auf DB/Supabase zu.
 
-### Chore Templates
+## 2.3 Relevante Fakten und Annahmen
 
-**FR-13 (Must Have)** — Create a chore template  
-**Done when:** A user can create a template with:
-- name (required)
-- area (required: kitchen/bathroom/living-room/general)
-- frequency (required: weekly OR every X days)
-- optional checklist items  
-and it persists via repository (no direct DB call in UI).
+**Ein Haushalt pro Nutzer (MVP)**: Ein Nutzer ist im MVP genau einem Haushalt zugeordnet (vereinfachte Domäne; kein Household-Switching).
 
-**FR-14 (Must Have)** — Edit an existing chore template  
-**Done when:** Template detail page loads an existing template, edits can be saved, and list reflects changes.
+**Onboarding**: Nach Login erstellt der Nutzer entweder einen Haushalt oder tritt per Join Code bei; danach wird ein Member-Profil erstellt (Name + Avatar).
 
-**FR-15 (Could Have)** — Archive a chore template  
-**Done when:** A template can be marked archived/inactive and no longer appears in the default list.
+**Persistenz/"Direkt Home"**: Nach erfolgreichem Beitritt/Erstellung wird der Member in der DB gespeichert, sodass Nutzer beim nächsten App-Start direkt auf die Home-Seite gelangen (kein erneutes Code-Eingeben).
 
-### Tasks & Rotation
+**Online-Anforderungen**: Kernfunktionen sollen auch offline bedienbar sein; Synchronisation erfolgt nach Wiederverbindung (MVP: einfache, robuste Sync-Strategie).
 
-**FR-16 (Must Have)** — Generate tasks from templates  
-**Done when:** For each template, task instances exist with a due date computed from frequency.
+**Zielgruppe/Umfeld**: Private Nutzung in kleinen Haushalten/WGs (typisch 2–8 Personen), keine Massenlast.
 
-**FR-17 (Must Have)** — Complete a task  
-**Done when:** Completing a task sets status/completedAt, updates UI immediately, and persists through repositories.
+**Sicherheit/Datenschutz (MVP)**: Zugriff erfolgt nur für authentifizierte Nutzer; Datenzugriff ist über Supabase Auth/RLS grundsätzlich geschützt; es werden nur minimale personenbezogene Daten gespeichert (Name/Avatar).
 
-**FR-18 (Must Have)** — Rotation assignment (round-robin)  
-**Done when:** When a task is completed, the next task assignment rotates to the next member in order, and a unit test covers the rotation logic.
+# 3. Funktionale Anforderungen (HappyHaushalt)
 
-**FR-19 (Should Have)** — Filter tasks: All vs Mine  
-**Done when:** A toggle exists to show all tasks or only tasks assigned to the currently logged-in member.
+## 3.1 Arbeitsumfang und Abgrenzung des Systems
 
-### Home / Overview
+Im Umfang (MVP):
 
-**FR-20 (Must Have)** — Home overview by areas  
-**Done when:** Home shows area tiles (kitchen, bathroom, living-room, general) and each tile reflects basic status (e.g., due/overdue/ok).
+- Authentifizierung per Google OAuth (Supabase Auth)
+- Onboarding: Haushalt erstellen oder per 6-stelligem Join Code beitreten
+- Profil-Setup beim ersten Beitritt: display_name setzen + Avatar (10 Optionen) wählen
+- Haushalt-Ansicht: Join Code anzeigen/kopieren, Mitgliederliste anzeigen (Name + Avatar, Owner markiert)
+- Chore Templates verwalten (CRUD light):
+  - Template anlegen, bearbeiten, archivieren/löschen (MVP: archivieren optional)
+  - Attribute: Name, Area, Frequenz, optionale Checkliste
+- Tasks / Aufgabenliste:
+  - Aufgaben aus Templates ableiten (Task Instances)
+  - Aufgaben anzeigen (z. B. fällig/heute/überfällig)
+  - Filter: Alle / Nur meine
+- Task abschließen:
+  - Setzt completedAt
+  - Erzeugt nächste fällige Task Instance
+  - Weist per **Round-Robin** dem nächsten Mitglied zu
 
-**FR-21 (Could Have)** — Empty state  
-**Done when:** If there are no tasks/templates, the user sees a friendly empty state illustration and CTA (e.g., “Create first chore”).
+# 4. Nicht-funktionale Anforderungen (HappyHaushalt)
 
-### Offline-first
+## 4.1 Oberflächenanforderungen (Look & Feel)
 
-**FR-22 (Must Have)** — Work offline (read + write)  
-**Done when:** With network disabled:
-- user can open app and view existing data
-- user can complete a task
-- changes are stored locally and not lost after refresh
+**Calm & playful**: ruhige, freundliche UI ohne „Telefonbuch"-Optik; card-basiert, viel Weißraum, weiche Ecken, dezente Schatten.
 
-**FR-23 (Must Have)** — Outbox + sync on reconnect  
-**Done when:** When network returns:
-- queued operations are processed
-- success changes outbox state to “done”
-- failures are shown as “failed” with a retry action
+**Illustrations-Style**: handgezeichnete/pen-artige Illustrationen (Haus-Mood, Areas) und humanoide Haushalts-Avatare konsistent im gleichen Stil.
 
----
+**Mobile-first & responsiv**: optimiert für Smartphone-Nutzung, nutzbar bis ca. Tablet/Small Desktop.
 
-## 6. Non-Functional Requirements (NFR)
+**Klarer Fokus**: wenige primäre Aktionen pro Screen (z. B. Task abhaken, Template bearbeiten, Join-Code kopieren).
 
-### Offline & Data Safety
+**Installierbar wie App**: PWA-typische App-Anmutung (App-Shell, feste Navigation, keine Browser-Überladung).
 
-**NFR-01 (Must Have)** — Offline-first behavior  
-The app must remain usable without internet connection.  
-**Done when:** A test/demo script can show: open app → go offline → complete task → reload → still completed → go online → sync processes outbox.
+## 4.2 Benutzbarkeitsanforderungen
 
-**NFR-02 (Must Have)** — No data loss on refresh  
-**Done when:** Data persists via IndexedDB/Dexie and survives browser refresh and reopen.
+**Ohne Schulung nutzbar**: selbsterklärende Navigation, klare Texte (z. B. „Join Code tippen zum Kopieren").
 
-### Performance
+**Minimale Eingaben**: Onboarding in wenigen Schritten (Login → Haushalt erstellen/joinen → Name/Avatar → Home).
 
-**NFR-03 (Should Have)** — Fast initial load  
-**Done when:** On a typical laptop/phone, the Home screen becomes interactive quickly (target: ~<2s in dev, ~<1s in prod build; best-effort).
+**Fehlertoleranz**: verständliche Fehlermeldungen (z. B. „Code ungültig"), keine „leeren" Screens.
 
-### Usability
+**Schnelle Kernaktionen**: Task als erledigt markieren mit 1–2 Taps; Filter „Alle/Nur meine" schnell erreichbar.
 
-**NFR-04 (Must Have)** — Mobile-first UI  
-**Done when:** Tap targets are comfortable, layout works at small widths, and navigation is possible one-handed.
+**Barrierearme Bedienung**: ausreichende Kontraste, große Touch-Targets, Tastaturbedienbarkeit wichtiger Controls (z. B. Avatar-Auswahl).
 
-**NFR-05 (Should Have)** — Calm, consistent design  
-**Done when:** App uses consistent spacing, card layout, and the same icon style across pages.
+## 4.3 Performance, Durchsatz, Kapazität, Sicherheit
 
-### Reliability & Maintainability
+**Performance (Client)**:
 
-**NFR-06 (Must Have)** — Clear separation of concerns  
-**Done when:** UI does not access the DB or remote APIs directly; all access goes through repository interfaces.
+- Initialer Screen-Load in typischer WLAN/4G-Umgebung zügig (Ziel: „gefühlt sofort", grob < 2s bis erste Inhalte).
+- UI-Interaktionen (Tabwechsel, Listen scrollen, Checkbox/Complete) ohne spürbare Verzögerung.
 
-**NFR-07 (Must Have)** — Tests and quality gates  
-**Done when:** CI runs lint + typecheck + tests + build, and at least:
-- 1 unit test for rotation logic
-- 1 e2e smoke test (app loads and basic navigation)
+**Kapazität (MVP-Annahme)**:
 
-### Security & Privacy (prototype-level)
+- Haushaltgröße typischerweise 2–8 Mitglieder.
+- Anzahl Templates/Tasks pro Haushalt: im niedrigen dreistelligen Bereich.
 
-**NFR-08 (Must Have)** — Secure authentication  
-**Done when:** Authentication is handled by Supabase Auth; the app does not store passwords itself.
+**Stabilität**:
 
-**NFR-09 (Should Have)** — Session handling is safe  
-**Done when:** Auth tokens/session are managed by the Supabase client libraries and are not logged or exposed in UI.
+- Offline-Betrieb darf keine Daten verlieren; Sync-Fehler müssen sichtbar und wiederholbar sein (Retry).
 
-**NFR-10 (Must Have)** — Privacy by minimal data  
-**Done when:** Stored user data is limited to what’s needed for chores (no sensitive personal data beyond what is required for login).
+**Sicherheit (Datenzugriff)**:
 
-**NFR-11 (Could Have)** — Basic input validation  
-**Done when:** Required fields are validated client-side (e.g., template name, frequency, join code format).
+- Zugriff auf Haushaltsdaten nur für authentifizierte Nutzer und nur im eigenen Haushalt (Supabase Auth + RLS).
+- Keine Speicherung von sensiblen Daten über das Notwendige hinaus (nur Name/Avatar/Haushaltszuordnung).
 
----
+## 4.4 Operationelle Anforderungen
 
-## 7. Traceability (light)
+**Betrieb als Cloud-PWA**: Deployment als statische Web-App (z. B. Vercel/ähnlich) erreichbar über Browser.
 
-- FR-01–07 → Auth + onboarding flow, session persistence, offline messaging
-- FR-08–12 → Household (create/join, join code, members, member profile)
-- FR-13–15 → Chores pages (templates list + detail)
-- FR-16–19 → Today/Tasks + rotation logic
-- FR-20–21 → Home overview + empty state
-- FR-22–23 → OfflineEngine + outbox
+**Installierbarkeit**: PWA muss auf iOS/Android/Desktop installierbar sein (Manifest + Service Worker).
 
-## 8. Open Questions (for later decisions)
+**Backend-Betrieb**: Supabase als Managed Service (Auth + Postgres); keine eigene Server-Infrastruktur nötig.
 
-- Should the join code be numeric only (PIN) or alphanumeric?
-- Do we allow profile setup “Skip” or require it once?
-- Minimum viable server data model for membership + sync (tables + RLS) vs keep sync stub for now
+**Offline-Verhalten**: App bleibt nutzbar bei Netzverlust; Änderungen werden lokal gespeichert und später synchronisiert.
+
+## 4.5 Wartungs- und Portierungsanforderungen
+
+**Modulare Architektur**: klare Schichten (UI → Feature → Repos → Storage/Sync) und getrennte Verantwortlichkeiten.
+
+**Erweiterbarkeit**: neue Features (Notifications, Rollenrechte, Multi-Household) sollen ohne große Refactors möglich sein.
+
+**Testbarkeit**: Kernlogik (z. B. Rotation) unit-testbar; kritische Flows smoke-testbar.
+
+**Portierbarkeit**: PWA als primäres Ziel; optional später native Hülle möglich, ohne Logik neu zu schreiben.
+
+## 4.6 Zugriffsschutzanforderungen
+
+**Login via Google OAuth (Supabase Auth)** als Zugangsvoraussetzung.
+
+**Haushaltszugang** nur über gültigen Join Code und DB-Regeln (Membership).
+
+**Autorisierung über Member-Zuordnung**: nur Mitglieder dürfen Haushalt/Mitglieder/Tasks sehen.
+
+**Owner-Markierung** vorhanden; gesonderte Owner-Rechte sind im MVP optional (können später ergänzt werden).
+
+## 4.7 Kulturelle und politische Anforderungen
+
+**Sprache**: Oberfläche primär Englisch (MVP), einfache Begriffe (Household, Task, Join).
+
+**Kulturell neutral**: Avatare/Illustrationen ohne politische/anstößige Symbolik; humorvoll, aber respektvoll.
+
+**DSGVO-Bewusstsein**: Datensparsamkeit und transparente Kommunikation, welche Daten gespeichert werden.
+
+## 4.8 Rechtliche Anforderungen
+
+**DSGVO (Grundsatz)**:
+
+- Speicherung nur notwendiger personenbezogener Daten (Google-Login, display_name, Avatar-ID).
+- Möglichkeit zur Account-Löschung/Entfernung perspektivisch (für Prototyp als Hinweis/To-Do ausreichend).
+
+**Datenverarbeitung durch Dritte**: Supabase/Google als externe Dienste → Hinweis in Doku (Prototyp-Kontext).
+
+**Sichere Übertragung**: Nutzung von HTTPS im Deployment (Standard bei Vercel/Supabase).
+
+# 5. Projektrandbedingungen (HappyHaushalt)
+
+## 5.1 Offene Punkte (Klärungsbedarf)
+
+**Offline-Sync-Tiefe**: Welche Daten müssen im MVP vollständig offline verfügbar sein (nur Tasks/Chores oder auch Household/Members)?
+
+**Rollen/Rechte**: Bleibt es im MVP bei „alle dürfen alles" oder braucht es minimale Owner-Rechte (z. B. Member entfernen)?
+
+**Task-Generierung**: Werden Tasks "on the fly" beim Öffnen erzeugt oder per expliziter Aktion/Job (clientseitig)?
+
+**Checklist-Handling**: Checkliste als reine Anzeige im Template oder auch als "Sub-Tasks" beim Erledigen?
+
+**Leave Household**: Wird "Haushalt verlassen" im MVP wirklich benötigt oder nur UI-Platzhalter?
+
+## 5.2 Fertiglösungen / Orientierung
+
+**Tody** (inspiriert Look & Home/House-Mood Ansatz; reduziert und ruhig)
+
+**Sweepy / OurHome / Flatastic** (WG-Aufgabenverteilung, teils gamifiziert → dient als Vergleich, aber bewusst nicht übernommen)
+
+**Allgemeine To-do Apps** (Todoist, Microsoft To Do) als Referenz für Listen/Filter, jedoch ohne Haushalts-/Rotation-Fokus
+
+## 5.3 Neue Probleme (mögliche Schwierigkeiten)
+
+**PWA-Specials**: iOS-PWA Eigenheiten (Install, Storage Limits, Background Sync)
+
+**Sync-Konflikte**: gleichzeitiges Bearbeiten/Abschließen derselben Task durch mehrere Nutzer
+
+**RLS/DB-Fehlerbilder**: Supabase Policies können zu "works locally but not in prod" führen
+
+**UI/UX-Feinschliff**: "calm & playful" konsequent halten, ohne Overdesign oder Unklarheit
+
+## 5.4 Aufgaben (geplant / durchgeführt)
+
+**Bereits durchgeführt (Baseline)**:
+
+- Repo/Projektstruktur + Guardrails (CONTRIBUTING/ARCHITECTURE, Branch-Konventionen, Assets/Illustrationen)
+- PWA-Scaffold (Vite + PWA Plugin) und Offline-Grundlage (Dexie + OfflineEngine/Outbox-Konzept)
+- Supabase Projekt: Auth (Google OAuth), Tabellen, RLS/Policies
+- Onboarding Flow (Create/Join Haushalt + Profil Name/Avatar) und Navigation zu Home
+
+**Geplant (nächste Sprints / Tickets)**:
+
+- Household Page finalisieren (echte Daten, Design polish)
+- Chore Templates: Create/Edit (mit Frequenz + optional Checkliste)
+- Task-Instanzen + Round-Robin Rotation bei Completion
+- "My Tasks" Filter + Today/Overdue Ansicht
+- Tests (Rotation Unit Tests, E2E Smoke) + CI grün
+- Doku-Paket (Requirements, UML, Projektlog, Lessons Learned, Präsentation)
+
+## 5.5 Inbetriebnahme und Migration
+
+**Betrieb**: Deployment als PWA (z. B. Vercel oder GitLab Pages/ähnlich), Supabase als Backend.
+
+**Migration**: Keine Übernahme alter Daten nötig (Neusystem/Prototyp).
+
+**Produktiver Einsatz**: Im Kurskontext als Prototyp; optional nutzbar für eine echte WG nach Abschluss.
+
+## 5.6 Risiken
+
+**Technisch**:
+
+- Offline-Sync und Konflikte werden komplexer als geplant
+- RLS/Policy-Fehler blockieren Datenzugriff (insbesondere bei Member/Household Queries)
+- PWA auf iOS eingeschränkt (Push/Sync/Storage je nach Version)
+
+**Organisatorisch**:
+
+- Zeitdruck durch parallele Bachelorarbeit/andere Module
+- Scope Creep ("nur noch schnell Kalender/Notifications")
+- Abstimmung/Code Reviews verzögern Merge in main
+
+## 5.7 Kosten
+
+**Zeitaufwand (fiktiv/Plan)**: ca. 20–35 Stunden pro Teammitglied (abhängig vom Umfang der Offline/Synchronisation)
+
+**Betriebskosten (realistisch, gering)**:
+
+- Supabase (Free/Starter je nach Nutzung)
+- Deployment (Vercel free tier möglich)
+- Sonstiges: keine Hardwarekosten, keine Lizenzen notwendig (Open Source Tooling)
+
+## 5.8 Benutzerdokumentation und Schulung
+
+**Kurzanleitung** (1–2 Seiten PDF/Markdown) mit Screenshots: Login → Haushalt beitreten → Task erledigen → Template anlegen
+
+**In-App Microcopy**: kurze Hinweise (Join Code tippen zum Kopieren, Offline-Banner, Fehlermeldungen)
+
+**Demo-Skript** für Präsentation (Happy Path + Offline-Fall)
+
+## 5.9 Warteraum (später, nicht im MVP)
+
+- Push Notifications (z. B. "Task überfällig")
+- Multi-Household pro Nutzer + Household Switcher
+- Rollen/Rechte (Owner Admin-Funktionen)
+- Task-Kommentare / Notizen / Foto-Upload
+- Kalenderansicht / ICS Export
+- Analytics/Insights (Fairness/Done Counts) über MVP hinaus
+
+## 5.10 Lösungsideen (Zukunft / Erweiterungen)
+
+**Konfliktlösung im Sync**: einfache Last-Write-Wins Regeln oder Server-Checks (Task already completed)
+
+**Smart Scheduling**: flexible Frequenzen, "skip/delay" Mechanik
+
+**Haushalts-Insights**: minimale Fairness-Widgets (Done/Overdue) optional
+
+**Internationalisierung**: DE zusätzlich zu EN
+
+**Native Wrapper**: später als TWA/Capacitor möglich, ohne Logik neu zu schreiben
