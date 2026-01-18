@@ -1,5 +1,6 @@
 import { Settings, CheckCircle2, Circle } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { useRepo } from '../../app/providers/RepoProvider';
 import { IconButton } from '../../core/ui/IconButton';
 import { HouseMoodCard } from './HouseMoodCard';
@@ -60,6 +61,23 @@ export function HomePage() {
     enabled: !!household,
   });
 
+  const { data: chores = [] } = useQuery({
+    queryKey: ['chores', household?.id],
+    queryFn: async () => {
+      if (!household) return [];
+      return repo.listChores(household.id);
+    },
+    enabled: !!household,
+  });
+
+  const choreById = useMemo(() => {
+    const map = new Map<string, { name: string; area: string }>();
+    for (const c of chores) {
+      map.set(c.id, { name: c.name, area: c.area });
+    }
+    return map;
+  }, [chores]);
+
   const handleCompleteTask = async (taskId: string) => {
     await repo.completeTask(taskId);
     await queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -85,29 +103,34 @@ export function HomePage() {
           <p className={styles.emptyState}>No tasks for today</p>
         ) : (
           <div className={styles.tasksList}>
-            {tasks.map((task) => (
-              <Card key={task.id} className={styles.taskTile}>
-                <div className={styles.taskContent}>
-                  <button
-                    onClick={() => handleCompleteTask(task.id)}
-                    className={styles.taskCheckbox}
-                    aria-label={task.completedAt ? 'Mark incomplete' : 'Mark complete'}
-                  >
-                    {task.completedAt ? (
-                      <CheckCircle2 size={24} className={styles.iconCompleted} />
-                    ) : (
-                      <Circle size={24} className={styles.iconIncomplete} />
-                    )}
-                  </button>
-                  <div className={styles.taskInfo}>
-                    <h3 className={styles.taskTitle}>{task.title}</h3>
-                    {task.area && (
-                      <span className={styles.taskArea}>{task.area}</span>
-                    )}
+            {tasks.map((task) => {
+              const template = choreById.get(task.choreTemplateId);
+              const title = template?.name ?? 'Task';
+              const area = template?.area;
+              return (
+                <Card key={task.id} className={styles.taskTile}>
+                  <div className={styles.taskContent}>
+                    <button
+                      onClick={() => handleCompleteTask(task.id)}
+                      className={styles.taskCheckbox}
+                      aria-label={task.completedAt ? 'Mark incomplete' : 'Mark complete'}
+                    >
+                      {task.completedAt ? (
+                        <CheckCircle2 size={24} className={styles.iconCompleted} />
+                      ) : (
+                        <Circle size={24} className={styles.iconIncomplete} />
+                      )}
+                    </button>
+                    <div className={styles.taskInfo}>
+                      <h3 className={styles.taskTitle}>{title}</h3>
+                      {area && (
+                        <span className={styles.taskArea}>{area}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </section>
