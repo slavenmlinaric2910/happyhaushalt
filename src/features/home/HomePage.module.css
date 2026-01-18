@@ -1,6 +1,6 @@
 .page {
   padding: 1.25rem 1.25rem;
-  padding-bottom: 5rem; /* Space for FAB */
+  padding-bottom: 2rem;
   max-width: 420px;
   margin: 0 auto;
 }
@@ -27,6 +27,85 @@
   font-size: 0.8125rem;
   color: #6b7280;
   text-decoration: underline;
+}
+
+.tasksSection {
+  margin-top: 1.5rem;
+}
+
+.sectionHeader {
+  font-size: 1.125rem; /* 18px */
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 1rem;
+}
+
+.tasksList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.taskTile {
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.taskTile:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.taskContent {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.taskCheckbox {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconIncomplete {
+  color: #9ca3af;
+}
+
+.iconCompleted {
+  color: #10b981;
+}
+
+.taskInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.taskTitle {
+  font-size: 0.9375rem; /* 15px */
+  font-weight: 500;
+  color: #111827;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskArea {
+  font-size: 0.8125rem; /* 13px */
+  color: #6b7280;
+}
+
+.emptyState {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  padding: 2rem 0;
 }
 
 .areasSection {

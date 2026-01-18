@@ -6,7 +6,6 @@ import { AuthProvider } from './providers/AuthProvider';
 import { BootstrapGuard } from './components/BootstrapGuard';
 import { AppLayout } from './layout/AppLayout';
 import { HomePage } from '../features/home/HomePage';
-import { TodayPage } from '../features/today/TodayPage';
 import { ChoresPage } from '../features/chores/ChoresPage';
 import { ChoreDetailPage } from '../features/chores/ChoreDetailPage';
 import { HouseholdPage } from '../features/household/HouseholdPage';
@@ -32,9 +31,8 @@ function AppRoutes() {
           path="/"
           element={<AppLayout />}
         >
-          <Route index element={<Navigate to="/home" replace />} />
-          <Route path="home" element={<HomePage />} />
-          <Route path="today" element={<TodayPage />} />
+          <Route index element={<Navigate to="/tasks" replace />} />
+          <Route path="tasks" element={<HomePage />} />
           <Route path="chores" element={<ChoresPage />} />
           <Route path="chores/:id" element={<ChoreDetailPage />} />
           <Route path="household" element={<HouseholdPage />} />
