@@ -55,10 +55,17 @@ export function HomePage() {
     queryFn: () => repo.getCurrentHousehold(),
   });
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const tomorrow = useMemo(() => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + 1);
+    return d;
+  }, [today]);
 
   const { data: tasksFromQuery = [] } = useQuery({
     queryKey: ['tasks', household?.id, today.toISOString()],
@@ -71,29 +78,32 @@ export function HomePage() {
   });
 
   // Entwicklermock: so tun, als gäbe es schon Aufgaben
-  const tasks: TaskLike[] = IS_DEV_MOCK
-    ? [
-      {
-        id: 't1',
-        choreTemplateId: 'dishes',
-        dueDate: today, // Due today
-        completedAt: null,
-      },
-      {
-        id: 't2',
-        choreTemplateId: 'vacuum',
-        dueDate: new Date(today.getTime() - 24 * 60 * 60 * 1000), // gestern -> overdue
-        completedAt: null,
-      },
-      {
-        id: 't3',
-        choreTemplateId: 'plants',
-        dueDate: new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000), // in 3 Tagen -> upcoming
-        completedAt: null,
-      },
-    ]
-    : tasksFromQuery;
-
+  const tasks: TaskLike[] = useMemo(
+    () =>
+      IS_DEV_MOCK
+        ? [
+          {
+            id: 't1',
+            choreTemplateId: 'dishes',
+            dueDate: today, // Due today
+            completedAt: null,
+          },
+          {
+            id: 't2',
+            choreTemplateId: 'vacuum',
+            dueDate: new Date(today.getTime() - 24 * 60 * 60 * 1000), // gestern -> overdue
+            completedAt: null,
+          },
+          {
+            id: 't3',
+            choreTemplateId: 'plants',
+            dueDate: new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000), // in 3 Tagen -> upcoming
+            completedAt: null,
+          },
+        ]
+        : tasksFromQuery,
+    [tasksFromQuery, today],
+  );
 
   const { overdueTasks, todayTasks, upcomingTasks } = useMemo(
     () => groupTasksByDueDate(tasks, today),
