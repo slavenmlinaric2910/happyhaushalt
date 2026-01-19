@@ -68,6 +68,36 @@ export class SupabaseMemberRepo implements MemberRepo {
   }
 
   /**
+   * Leaves the current household for the authenticated user.
+   *
+   * This removes the "member" record for the current user. After that,
+   * getCurrentMember() will return null and the app will behave as "not in a household".
+   */
+  async leaveCurrentHousehold(): Promise<void> {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      throw new Error(`Failed to get session: ${sessionError.message}`);
+    }
+
+    if (!session?.user) {
+      throw new Error('User must be authenticated to leave a household');
+    }
+
+    const { error } = await supabase
+      .from('members')
+      .delete()
+      .eq('user_id', session.user.id);
+
+    if (error) {
+      throw new Error(`Failed to leave household: ${error.message}`);
+    }
+  }
+
+  /**
    * Lists all members of a household.
    */
   async listMembersByHousehold(householdId: string): Promise<Member[]> {
