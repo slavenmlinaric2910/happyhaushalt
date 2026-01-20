@@ -1,41 +1,50 @@
-import { Settings, CheckCircle2, Circle } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useRepo } from '../../app/providers/RepoProvider';
 import { IconButton } from '../../core/ui/IconButton';
 import { HouseMoodCard } from './HouseMoodCard';
-import { AreaTile } from './AreaTile';
-import { Card } from '../../core/ui/Card';
 import styles from './HomePage.module.css';
+import {TaskListSection} from './TaskListSection';
+import { Settings } from 'lucide-react';
 
-const AREAS = [
-  {
-    name: 'Kitchen',
-    illustration: '/illustrations/area-kitchen.png',
-    status: 'good' as const,
-    backgroundColor: 'warm' as const,
-  },
-  {
-    name: 'Bathroom',
-    illustration: '/illustrations/area-bathroom.png',
-    status: 'due-today' as const,
-    dueCount: 2,
-    backgroundColor: 'blue' as const,
-  },
-  {
-    name: 'Living Room',
-    illustration: '/illustrations/area-living-room.png',
-    status: 'overdue' as const,
-    dueCount: 2,
-    backgroundColor: 'mint' as const,
-  },
-  {
-    name: 'General',
-    illustration: '/illustrations/area-general.png',
-    status: 'good' as const,
-    backgroundColor: 'warm' as const,
-  },
-];
+// Dev-Flag anlegen zum Testen
+const IS_DEV_MOCK = true;
+
+type TaskLike = {
+  id: string;
+  choreTemplateId: string;
+  dueDate: string | Date;
+  completedAt?: string | Date | null;
+};
+
+// Hilfsfunktion außerhalb des Components
+function groupTasksByDueDate<T extends TaskLike>(tasks: T[], today: Date) {
+  const startOfToday = new Date(today);
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const startOfTomorrow = new Date(startOfToday);
+  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+
+  const overdueTasks: T[] = [];
+  const todayTasks: T[] = [];
+  const upcomingTasks: T[] = [];
+
+  for (const task of tasks) {
+    if (task.completedAt) continue;
+
+    const due = new Date(task.dueDate);
+
+    if (due < startOfToday) {
+      overdueTasks.push(task);
+    } else if (due >= startOfToday && due < startOfTomorrow) {
+      todayTasks.push(task);
+    } else {
+      upcomingTasks.push(task);
+    }
+  }
+
+  return { overdueTasks, todayTasks, upcomingTasks };
+}
 
 export function HomePage() {
   const repo = useRepo();
@@ -46,12 +55,19 @@ export function HomePage() {
     queryFn: () => repo.getCurrentHousehold(),
   });
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
 
-  const { data: tasks = [] } = useQuery({
+  const tomorrow = useMemo(() => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + 1);
+    return d;
+  }, [today]);
+
+  const { data: tasksFromQuery = [] } = useQuery({
     queryKey: ['tasks', household?.id, today.toISOString()],
     queryFn: async () => {
       if (!household) return [];
@@ -60,6 +76,39 @@ export function HomePage() {
     },
     enabled: !!household,
   });
+
+  // Entwicklermock: so tun, als gäbe es schon Aufgaben
+  const tasks: TaskLike[] = useMemo(
+    () =>
+      IS_DEV_MOCK
+        ? [
+          {
+            id: 't1',
+            choreTemplateId: 'dishes',
+            dueDate: today, // Due today
+            completedAt: null,
+          },
+          {
+            id: 't2',
+            choreTemplateId: 'vacuum',
+            dueDate: new Date(today.getTime() - 24 * 60 * 60 * 1000), // gestern -> overdue
+            completedAt: null,
+          },
+          {
+            id: 't3',
+            choreTemplateId: 'plants',
+            dueDate: new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000), // in 3 Tagen -> upcoming
+            completedAt: null,
+          },
+        ]
+        : tasksFromQuery,
+    [tasksFromQuery, today],
+  );
+
+  const { overdueTasks, todayTasks, upcomingTasks } = useMemo(
+    () => groupTasksByDueDate(tasks, today),
+    [tasks, today],
+  );
 
   const { data: chores = [] } = useQuery({
     queryKey: ['chores', household?.id],
@@ -75,6 +124,13 @@ export function HomePage() {
     for (const c of chores) {
       map.set(c.id, { name: c.name, area: c.area });
     }
+
+    if (IS_DEV_MOCK) {
+      map.set('dishes', { name: 'Dishes', area: 'Kitchen' });
+      map.set('vacuum', { name: 'Vacuum', area: 'Living Room' });
+      map.set('plants', { name: 'Water plants', area: 'Balcony' });
+    }
+
     return map;
   }, [chores]);
 
@@ -97,59 +153,36 @@ export function HomePage() {
 
       <HouseMoodCard status="good" message="All good — nothing overdue." />
 
+      <div className={styles.tabs}>
+        <button className={`${styles.tab} ${styles.tabActive}`}>Mine</button>
+        <button className={styles.tab}>All</button>
+      </div>
+
       <section className={styles.tasksSection}>
-        <h2 className={styles.sectionHeader}>Today's Tasks</h2>
-        {tasks.length === 0 ? (
-          <p className={styles.emptyState}>No tasks for today</p>
-        ) : (
-          <div className={styles.tasksList}>
-            {tasks.map((task) => {
-              const template = choreById.get(task.choreTemplateId);
-              const title = template?.name ?? 'Task';
-              const area = template?.area;
-              return (
-                <Card key={task.id} className={styles.taskTile}>
-                  <div className={styles.taskContent}>
-                    <button
-                      onClick={() => handleCompleteTask(task.id)}
-                      className={styles.taskCheckbox}
-                      aria-label={task.completedAt ? 'Mark incomplete' : 'Mark complete'}
-                    >
-                      {task.completedAt ? (
-                        <CheckCircle2 size={24} className={styles.iconCompleted} />
-                      ) : (
-                        <Circle size={24} className={styles.iconIncomplete} />
-                      )}
-                    </button>
-                    <div className={styles.taskInfo}>
-                      <h3 className={styles.taskTitle}>{title}</h3>
-                      {area && (
-                        <span className={styles.taskArea}>{area}</span>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+        <TaskListSection
+          title="Overdue"
+          emptyMessage="No overdue tasks"
+          tasks={overdueTasks}
+          choreById={choreById}
+          onToggleComplete={handleCompleteTask}
+        />
+        <TaskListSection
+          title="Due today"
+          emptyMessage="No tasks for today"
+          tasks={todayTasks}
+          choreById={choreById}
+          onToggleComplete={handleCompleteTask}
+        />
+        <TaskListSection
+          title="Upcoming"
+          emptyMessage="No upcoming tasks"
+          tasks={upcomingTasks}
+          choreById={choreById}
+          onToggleComplete={handleCompleteTask}
+        />
       </section>
 
-      <section className={styles.areasSection}>
-        <h2 className={styles.areasHeader}>Areas</h2>
-        <div className={styles.areasGrid}>
-          {AREAS.map((area) => (
-            <AreaTile
-              key={area.name}
-              name={area.name}
-              illustration={area.illustration}
-              status={area.status}
-              dueCount={area.dueCount}
-              backgroundColor={area.backgroundColor}
-            />
-          ))}
-        </div>
-      </section>
+
     </div>
   );
 }
