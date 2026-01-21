@@ -6,6 +6,8 @@ import { Card } from '../../core/ui/Card';
 import { Button } from '../../core/ui/Button';
 import { Users, Plus, UserPlus, LogOut, Lock, ThumbsUp, ArrowRight } from 'lucide-react';
 import styles from './HouseholdPage.module.css';
+import { ConfirmDialog } from '../../core/ui/ConfirmDialog';
+import { useAuth } from '../../app/providers/AuthProvider';
 
 export function HouseholdPage() {
   const householdRepo = useHouseholdRepo();
@@ -13,6 +15,9 @@ export function HouseholdPage() {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const queryClient = useQueryClient();
+  const { signOut } = useAuth();
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+
 
   const leaveHouseholdMutation = useMutation({
     mutationFn: async () => {
@@ -20,9 +25,14 @@ export function HouseholdPage() {
       await memberRepo.leaveCurrentHousehold();
     },
     onSuccess: async () => {
-      // Refresh cached data so the app reflects the "no household" state
-      await queryClient.invalidateQueries();
-      navigate('/onboarding');
+      // Clear cached data so stale household/member info can't reappear after leaving
+      queryClient.clear();
+
+      // Sign out to remove session/user data (team requirement)
+      await signOut();
+
+      // Redirect to login and prevent the browser back button from returning here
+      navigate('/login', { replace: true });
     },
     onError: (error) => {
       console.error('Failed to leave household:', error);
@@ -248,23 +258,26 @@ export function HouseholdPage() {
           Invite
         </Button>
         <Button
-          onClick={() => {
-            const confirmed = window.confirm(
-            'Do you really want to leave this household? You will lose access to its chores and members.'
-          );
-          
-          if (!confirmed) return;
-
-          leaveHouseholdMutation.mutate();
-        }}
-        disabled={leaveHouseholdMutation.isPending}
-        variant="ghost"
-        className={styles.leaveButton}
+          onClick={() => setShowLeaveDialog(true)}
+          disabled={leaveHouseholdMutation.isPending}
+          variant="ghost"
+          className={styles.leaveButton}
         >
           <LogOut size={18} />
           {leaveHouseholdMutation.isPending ? 'Leaving…' : 'Leave'}
         </Button>
       </div>
+      <ConfirmDialog
+        open={showLeaveDialog}
+        title="Leave household?"
+        description="You will be logged out and lose access to this household. You can rejoin with the join code."
+        confirmLabel={leaveHouseholdMutation.isPending ? 'Leaving…' : 'Leave'}
+        cancelLabel="Cancel"
+        confirmVariant="primary"
+        confirmDisabled={leaveHouseholdMutation.isPending}
+        onCancel={() => setShowLeaveDialog(false)}
+        onConfirm={() => leaveHouseholdMutation.mutate()}
+      />
     </div>
   );
 }
