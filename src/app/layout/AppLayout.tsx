@@ -3,11 +3,17 @@ import { ListTodo, Users } from 'lucide-react';
 import { useState } from 'react';
 import { OfflineBanner } from '../../core/ui/OfflineBanner';
 import { CreateModal } from '../../core/ui/CreateModal';
+import { SupabaseTaskRepo } from '../../core/repos/SupabaseTaskRepo';
+import { supabase } from '../../lib/supabase/client';
+import { useHouseholdRepo } from '../providers/RepoProvider';
 import styles from './AppLayout.module.css';
+
+const taskRepo = new SupabaseTaskRepo();
 
 export function AppLayout() {
   const location = useLocation();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const householdRepo = useHouseholdRepo();
 
   const navItems = [
     { path: '/tasks', icon: ListTodo, label: 'Tasks' },
@@ -20,10 +26,39 @@ export function AppLayout() {
     // TODO: Navigate to create task form
   };
 
-  const handleCreateChore = () => {
-    console.log('Create new chore');
+  const handleCreateChore = async () => {
     setIsCreateModalOpen(false);
-    // TODO: Navigate to create chore form
+    
+    // Get current user from session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      console.error('No authenticated user found');
+      return;
+    }
+
+    // Get current household
+    const currentHousehold = await householdRepo.getCurrentHousehold();
+    if (!currentHousehold) {
+      console.error('No household found for current user');
+      return;
+    }
+
+    // Test data for creating a task
+    const testTaskInput = {
+      householdId: currentHousehold.id, // Current household ID
+      templateId: null, // No template for manual task
+      title: 'Test Task - Küche aufräumen',
+      dueDate: new Date('2026-02-01'), // 01.02.2026
+      assignedUserId: session.user.id, // Current authenticated user
+      status: 'open' as const,
+    };
+
+    try {
+      const createdTask = await taskRepo.createTask(testTaskInput);
+      console.log('Task created successfully:', createdTask);
+    } catch (error) {
+      console.error('Failed to create task:', error);
+    }
   };
 
   return (

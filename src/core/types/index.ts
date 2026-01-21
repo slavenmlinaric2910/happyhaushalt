@@ -38,8 +38,29 @@ export interface TaskInstance {
   completedAt: Date | null;
 }
 
+/**
+ * Task entity matching the database schema (tasks table).
+ * Different from TaskInstance which is generated from ChoreTemplates.
+ */
+export interface Task {
+  id: string;
+  householdId: string;
+  templateId: string | null;
+  title: string;
+  dueDate: Date;
+  assignedUserId: string;
+  status: 'open' | 'done' | 'skipped';
+  completedAt: Date | null;
+  completedByUserId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type CreateTaskInput = Omit<Task, 'id' | 'completedAt' | 'completedByUserId' | 'createdAt' | 'updatedAt'>;
+
 export type OfflineOpType =
   | 'COMPLETE_TASK'
+  | 'CREATE_TASK'
   | 'CREATE_CHORE'
   | 'UPDATE_CHORE'
   | 'ARCHIVE_CHORE'

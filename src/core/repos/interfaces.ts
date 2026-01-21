@@ -32,6 +32,7 @@ export interface TaskRepo {
   listTasks(householdId: string, range: { start: Date; end: Date }): Promise<TaskInstance[]>;
   completeTask(taskId: string): Promise<void>;
   regenerateTasksIfNeeded(householdId: string): Promise<void>;
+  createTask(input: import('../types').CreateTaskInput): Promise<import('../types').Task>;
 }
 
 export interface MemberRepo {
