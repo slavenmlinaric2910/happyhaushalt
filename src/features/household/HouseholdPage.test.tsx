@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -7,6 +7,25 @@ import { MemoryRouter } from 'react-router-dom';
 import { HouseholdPage } from './HouseholdPage';
 
 // --- Mocks -------------------------------------------------------------
+
+const signOutMock = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('../../app/providers/AuthProvider', async () => {
+  const actual = await vi.importActual<typeof import('../../app/providers/AuthProvider')>(
+    '../../app/providers/AuthProvider'
+  );
+
+  return {
+    ...actual,
+    useAuth: () => ({
+      loading: false,
+      session: null,
+      user: null,
+      signInWithGoogle: vi.fn(),
+      signOut: signOutMock,
+    }),
+  };
+});
 
 const mockNavigate = vi.fn();
 
@@ -57,8 +76,6 @@ describe('HouseholdPage - Leave button', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Confirm dialog should allow leaving in this test
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     // Mock household + members
     mockHouseholdRepo.getCurrentHousehold.mockResolvedValue({
@@ -86,21 +103,31 @@ describe('HouseholdPage - Leave button', () => {
     mockMemberRepo.leaveCurrentHousehold.mockResolvedValue(undefined);
   });
 
-  it('leaves the household and navigates to onboarding', async () => {
+    it('leaves the household and navigates to login', async () => {
     renderWithProviders();
 
     // Wait until the real (non-loading) UI is visible
     expect(await screen.findByRole('button', { name: /invite/i })).toBeInTheDocument();
 
+    // Click Leave -> opens dialog
     const leaveButton = await screen.findByRole('button', { name: /leave/i });
     await userEvent.click(leaveButton);
+
+    // Confirm inside dialog -> triggers mutation
+    const dialog = await screen.findByRole('dialog');
+    const confirmLeaveButton = within(dialog).getByRole('button', { name: /^leave$/i });
+    await userEvent.click(confirmLeaveButton);
 
     await waitFor(() => {
       expect(mockMemberRepo.leaveCurrentHousehold).toHaveBeenCalledTimes(1);
     });
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/onboarding');
+      expect(signOutMock).toHaveBeenCalledTimes(1);
+    });
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
     });
   });
 });
