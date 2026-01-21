@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useHouseholdRepo, useMemberRepo } from '../../app/providers/RepoProvider';
 import { Card } from '../../core/ui/Card';
@@ -12,6 +12,23 @@ export function HouseholdPage() {
   const memberRepo = useMemberRepo();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const queryClient = useQueryClient();
+
+  const leaveHouseholdMutation = useMutation({
+    mutationFn: async () => {
+      // Leave the household by removing the current user's member record
+      await memberRepo.leaveCurrentHousehold();
+    },
+    onSuccess: async () => {
+      // Refresh cached data so the app reflects the "no household" state
+      await queryClient.invalidateQueries();
+      navigate('/onboarding');
+    },
+    onError: (error) => {
+      console.error('Failed to leave household:', error);
+    },
+  });
+
 
   const {
     data: household,
@@ -231,12 +248,21 @@ export function HouseholdPage() {
           Invite
         </Button>
         <Button
-          onClick={() => {/* TODO: Handle leave */}}
-          variant="ghost"
-          className={styles.leaveButton}
+          onClick={() => {
+            const confirmed = window.confirm(
+            'Do you really want to leave this household? You will lose access to its chores and members.'
+          );
+          
+          if (!confirmed) return;
+
+          leaveHouseholdMutation.mutate();
+        }}
+        disabled={leaveHouseholdMutation.isPending}
+        variant="ghost"
+        className={styles.leaveButton}
         >
           <LogOut size={18} />
-          Leave
+          {leaveHouseholdMutation.isPending ? 'Leaving…' : 'Leave'}
         </Button>
       </div>
     </div>
