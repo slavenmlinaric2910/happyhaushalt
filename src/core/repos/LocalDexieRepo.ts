@@ -4,6 +4,7 @@ import type {
   Member,
   ChoreTemplate,
   TaskInstance,
+  Task,
 } from '../types';
 import { generateId } from '../../lib/utils';
 import type { HouseholdRepo, ChoreRepo, TaskRepo } from './interfaces';
@@ -107,6 +108,55 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
         return dueDate >= range.start && dueDate <= range.end;
       })
       .toArray();
+  }
+
+  // TaskRepo interface implementation (Supabase-style)
+  async createTask(): Promise<Task> {
+    // This is a stub - LocalDexieRepo is being phased out in favor of Supabase
+    throw new Error('createTask not implemented in LocalDexieRepo. Use SupabaseTaskRepo instead.');
+  }
+
+  // Legacy method - kept for backward compatibility
+  async createManualTask(data: {
+    name: string;
+    area: string;
+    dueDate: Date;
+    assignedMemberId: string;
+    householdId: string;
+  }): Promise<TaskInstance> {
+    // Create a virtual chore template for one-time tasks
+    const choreTemplateId = `manual-${generateId()}`;
+    
+    const task: TaskInstance = {
+      id: generateId(),
+      householdId: data.householdId,
+      choreTemplateId,
+      dueDate: data.dueDate,
+      assignedMemberId: data.assignedMemberId,
+      status: 'pending',
+      completedAt: null,
+    };
+
+    // Store the task name and area in the chore template for display
+    const choreTemplate: ChoreTemplate = {
+      id: choreTemplateId,
+      householdId: data.householdId,
+      name: data.name,
+      area: data.area,
+      frequencyType: 'custom',
+      frequencyValue: 0, // One-time task
+      rotationCursor: 0,
+      isArchived: false,
+    };
+
+    await db.choreTemplates.add(choreTemplate);
+    await db.tasks.add(task);
+    await this.offlineEngine.enqueue('CREATE_TASK', {
+      task: task as unknown as Record<string, unknown>,
+      choreTemplate: choreTemplate as unknown as Record<string, unknown>,
+    });
+
+    return task;
   }
 
   async completeTask(taskId: string): Promise<void> {

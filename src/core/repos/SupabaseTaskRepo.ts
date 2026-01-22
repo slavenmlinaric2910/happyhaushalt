@@ -129,7 +129,7 @@ export class SupabaseTaskRepo implements TaskRepo {
   /**
    * Regenerates tasks if needed (placeholder for future implementation).
    */
-  async regenerateTasksIfNeeded(_householdId: string): Promise<void> {
+  async regenerateTasksIfNeeded(): Promise<void> {
     // TODO: Implement task regeneration logic based on chore templates
     console.log('regenerateTasksIfNeeded not yet implemented');
   }

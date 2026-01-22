@@ -1,18 +1,19 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
-import { ListTodo, Users } from 'lucide-react';
 import { useState } from 'react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { ListTodo, Users } from 'lucide-react';
 import { OfflineBanner } from '../../core/ui/OfflineBanner';
-import { CreateModal } from '../../core/ui/CreateModal';
 import { SupabaseTaskRepo } from '../../core/repos/SupabaseTaskRepo';
 import { supabase } from '../../lib/supabase/client';
 import { useHouseholdRepo } from '../providers/RepoProvider';
+import { BottomSheet } from '../../core/ui/BottomSheet';
 import styles from './AppLayout.module.css';
 
 const taskRepo = new SupabaseTaskRepo();
 
 export function AppLayout() {
   const location = useLocation();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const navigate = useNavigate();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const householdRepo = useHouseholdRepo();
 
   const navItems = [
@@ -20,14 +21,21 @@ export function AppLayout() {
     { path: '/household', icon: Users, label: 'Household' },
   ];
 
+  const handleCreateClick = () => {
+    setIsSheetOpen(true);
+  };
+
+  const handleCloseSheet = () => {
+    setIsSheetOpen(false);
+  };
+
   const handleCreateTask = () => {
-    console.log('Create new task');
-    setIsCreateModalOpen(false);
-    // TODO: Navigate to create task form
+    setIsSheetOpen(false);
+    navigate('/tasks/create');
   };
 
   const handleCreateChore = async () => {
-    setIsCreateModalOpen(false);
+    setIsSheetOpen(false);
     
     // Get current user from session
     const { data: { session } } = await supabase.auth.getSession();
@@ -78,7 +86,7 @@ export function AppLayout() {
               <>
                 <button
                   key="create"
-                  onClick={() => setIsCreateModalOpen(true)}
+                  onClick={handleCreateClick}
                   className={styles.navItemCreate}
                   aria-label="Create task"
                 >
@@ -108,9 +116,9 @@ export function AppLayout() {
           );
         })}
       </nav>
-      <CreateModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+      <BottomSheet
+        isOpen={isSheetOpen}
+        onClose={handleCloseSheet}
         onCreateTask={handleCreateTask}
         onCreateChore={handleCreateChore}
       />

@@ -59,6 +59,7 @@ export interface Task {
 export type CreateTaskInput = Omit<Task, 'id' | 'completedAt' | 'completedByUserId' | 'createdAt' | 'updatedAt'>;
 
 export type OfflineOpType =
+  | 'CREATE_TASK'
   | 'COMPLETE_TASK'
   | 'CREATE_TASK'
   | 'CREATE_CHORE'

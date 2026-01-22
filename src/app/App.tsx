@@ -6,11 +6,10 @@ import { AuthProvider } from './providers/AuthProvider';
 import { BootstrapGuard } from './components/BootstrapGuard';
 import { AppLayout } from './layout/AppLayout';
 import { HomePage } from '../features/home/HomePage';
-import { ChoresPage } from '../features/chores/ChoresPage';
-import { ChoreDetailPage } from '../features/chores/ChoreDetailPage';
 import { HouseholdPage } from '../features/household/HouseholdPage';
 import { OnboardingPage } from '../features/onboarding/OnboardingPage';
 import { LoginPage } from '../features/auth/LoginPage';
+import { CreateTaskPage } from '../features/tasks/CreateTaskPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,8 +32,7 @@ function AppRoutes() {
         >
           <Route index element={<Navigate to="/tasks" replace />} />
           <Route path="tasks" element={<HomePage />} />
-          <Route path="chores" element={<ChoresPage />} />
-          <Route path="chores/:id" element={<ChoreDetailPage />} />
+          <Route path="tasks/create" element={<CreateTaskPage />} />
           <Route path="household" element={<HouseholdPage />} />
         </Route>
       </Routes>
