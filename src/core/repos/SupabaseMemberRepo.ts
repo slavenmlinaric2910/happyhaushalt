@@ -67,11 +67,15 @@ export class SupabaseMemberRepo implements MemberRepo {
     return mapMember(memberData);
   }
 
-  /**
+    /**
    * Leaves the current household for the authenticated user.
    *
    * This removes the "member" record for the current user. After that,
    * getCurrentMember() will return null and the app will behave as "not in a household".
+   *
+   * Important:
+   * - Supabase/PostgREST can return 204 even when 0 rows were deleted (e.g. RLS or no match).
+   * - Therefore we request a return payload and validate that something was actually deleted.
    */
   async leaveCurrentHousehold(): Promise<void> {
     const {
@@ -87,15 +91,28 @@ export class SupabaseMemberRepo implements MemberRepo {
       throw new Error('User must be authenticated to leave a household');
     }
 
-    const { error } = await supabase
+    // Try to delete the current user's membership row and return the deleted id(s).
+    // If RLS blocks this or no rows match, we will get an empty array -> we treat that as a failure.
+    const { data: deletedRows, error: deleteError } = await supabase
       .from('members')
       .delete()
-      .eq('user_id', session.user.id);
+      .eq('user_id', session.user.id)
+      .select('id');
 
-    if (error) {
-      throw new Error(`Failed to leave household: ${error.message}`);
+    if (deleteError) {
+      throw new Error(`Failed to leave household: ${deleteError.message}`);
+    }
+
+    if (!deletedRows || deletedRows.length === 0) {
+      // This usually means:
+      // - there was no membership row for that user_id, OR
+      // - Row Level Security (RLS) prevented the delete
+      throw new Error(
+        'Failed to leave household: no membership row was deleted (possible RLS policy issue)'
+      );
     }
   }
+
 
   /**
    * Lists all members of a household.
