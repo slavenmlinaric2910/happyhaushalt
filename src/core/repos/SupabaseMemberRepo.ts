@@ -17,7 +17,7 @@ interface SupabaseMemberRow {
 /**
  * Maps a Supabase member row to a domain Member object.
  */
-function mapMember(row: SupabaseMemberRow): Member {
+export function mapMember(row: SupabaseMemberRow): Member {
   return {
     id: row.id,
     householdId: row.household_id,

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useHouseholdRepo, useMemberRepo } from '../../app/providers/RepoProvider';
+import { useAuth } from '../../app/providers/AuthProvider';
 import { Card } from '../../core/ui/Card';
 import { Button } from '../../core/ui/Button';
 import { Users, Plus, UserPlus, LogOut, Lock, ThumbsUp, ArrowRight } from 'lucide-react';
@@ -12,27 +13,34 @@ export function HouseholdPage() {
   const memberRepo = useMemberRepo();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const { user } = useAuth();
+  const userId = user?.id || '';
 
+  // Fetch member via React Query (will use cache if BootstrapGuard already fetched it)
+  const { data: member } = useQuery({
+    queryKey: ['member', userId],
+    queryFn: () => memberRepo.getCurrentMember(),
+    staleTime: 1000 * 60 * 5, // 5 minutes (member doesn't change often)
+  });
+
+  // Pass cached member to avoid duplicate getCurrentMember() call
   const {
-    data: household,
-    isLoading: householdLoading,
+    data: householdData,
+    isLoading,
     error: householdError,
   } = useQuery({
-    queryKey: ['household'],
-    queryFn: () => householdRepo.getCurrentHousehold(),
+    queryKey: ['household-with-members', userId],
+    queryFn: async () => {
+      const result = await householdRepo.getCurrentHouseholdWithMembers(member);
+      return result;
+    },
+    enabled: member !== undefined, // Wait for member query to resolve (even if null)
+    refetchOnMount: 'always',
+    staleTime: 1000 * 60, // 1 minute (shorter than default 5 min)
   });
 
-  const {
-    data: members = [],
-    isLoading: membersLoading,
-  } = useQuery({
-    queryKey: ['members', household?.id],
-    queryFn: async () => {
-      if (!household) return [];
-      return memberRepo.listMembersByHousehold(household.id);
-    },
-    enabled: !!household,
-  });
+  const household = householdData?.household;
+  const members = householdData?.members || [];
 
   const handleCopyCode = async () => {
     if (household?.joinCode) {
@@ -47,27 +55,34 @@ export function HouseholdPage() {
   };
 
   const handleAvatarError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    // Fallback to a default avatar if image fails to load
+    // Fallback to PNG if WebP fails, then to default avatar
     const target = e.currentTarget;
-    target.src = '/avatars/broom-buddy.png';
+    if (target.src.endsWith('.webp')) {
+      // Try PNG fallback
+      const pngSrc = target.src.replace('.webp', '.png');
+      target.src = pngSrc;
+    } else {
+      // Final fallback to default avatar
+      target.src = '/avatars/broom-buddy.png';
+    }
   };
 
-  // Find creator's display name
-  const creatorMember = household?.createdBy
-    ? members.find((m) => m.userId === household.createdBy)
-    : null;
-  const creatorName = creatorMember?.displayName || 'Unknown';
+  // Memoize creator name calculation
+  const creatorName = useMemo(() => {
+    if (!household?.createdBy) return 'Unknown';
+    const creatorMember = members.find((m) => m.userId === household.createdBy);
+    return creatorMember?.displayName || 'Unknown';
+  }, [household?.createdBy, members]);
 
   // Loading state
-  if (householdLoading || membersLoading) {
+  if (isLoading) {
     return (
       <div className={styles.page}>
         <header className={styles.header}>
           <div>
-            <h1 className={styles.title}>{household?.name}</h1>
-            <div className={styles.skeleton} style={{ width: '150px', height: '16px', marginTop: '0.5rem' }} />
+            <div className={styles.skeleton} style={{ width: '150px', height: '24px', marginBottom: '0.5rem' }} />
+            <div className={styles.skeleton} style={{ width: '200px', height: '16px' }} />
           </div>
-          <div className={styles.skeleton} style={{ width: '64px', height: '64px', borderRadius: '8px' }} />
         </header>
         <Card className={styles.joinCodeCard}>
           <div className={styles.skeleton} style={{ width: '100px', height: '24px', marginBottom: '1rem' }} />
@@ -146,12 +161,27 @@ export function HouseholdPage() {
 
       {/* Join Code Section with decorative house illustration */}
       <div className={styles.joinCodeSection}>
-        <img
-          src="/illustrations/house_happy_illustration.png"
-          alt=""
-          className={styles.houseDecoration}
-          aria-hidden="true"
-        />
+        <picture>
+          <source
+            srcSet="/illustrations/house_happy_illustration.webp 1x, /illustrations/house_happy_illustration@2x.webp 2x"
+            type="image/webp"
+          />
+          <img
+            {...({ fetchpriority: 'high' } as React.ImgHTMLAttributes<HTMLImageElement>)}
+            src="/illustrations/house_happy_illustration.webp"
+            alt=""
+            className={styles.houseDecoration}
+            aria-hidden="true"
+            width="380"
+            height="380"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (target.src.endsWith('.webp')) {
+                target.src = '/illustrations/house_happy_illustration.png';
+              }
+            }}
+          />
+        </picture>
         <Card className={styles.joinCodeCard}>
         <div className={styles.joinCodeLabelPill}>
           <span>Join Code</span>
@@ -197,9 +227,14 @@ export function HouseholdPage() {
             return (
               <Card key={member.id} className={styles.memberCard}>
                 <img
-                  src={`/avatars/${member.avatarId}.png`}
+                  src={`/avatars/${member.avatarId}.webp`}
+                  srcSet={`/avatars/${member.avatarId}.webp 1x, /avatars/${member.avatarId}@2x.webp 2x`}
+                  sizes="230px"
                   alt={member.displayName}
                   className={styles.memberAvatar}
+                  loading="lazy"
+                  width="230"
+                  height="230"
                   onError={handleAvatarError}
                 />
                 <p className={styles.memberName}>{member.displayName}</p>
