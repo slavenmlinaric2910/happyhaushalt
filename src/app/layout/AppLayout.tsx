@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { ListTodo, Plus, Users } from 'lucide-react';
 import { OfflineBanner } from '../../core/ui/OfflineBanner';
@@ -30,7 +31,7 @@ export function AppLayout() {
           // Insert create button between Tasks and Household
           if (index === 1) {
             return (
-              <>
+              <Fragment key={`nav-${index}`}>
                 <button
                   key="create"
                   onClick={handleCreateTask}
@@ -47,7 +48,7 @@ export function AppLayout() {
                   <Icon size={20} />
                   <span>{item.label}</span>
                 </Link>
-              </>
+              </Fragment>
             );
           }
 

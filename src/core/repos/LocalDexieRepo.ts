@@ -50,6 +50,19 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
     return db.members.where('householdId').equals(householdId).toArray();
   }
 
+  async getCurrentHouseholdWithMembers(_member?: Member | null): Promise<{ household: Household | null; members: Member[] }> {
+    // LocalDexieRepo doesn't need member parameter, but accepts it for interface compatibility
+    // It can get household directly without needing member.householdId
+    // Parameter prefixed with _ to indicate intentionally unused
+    void _member; // Explicitly mark as used to satisfy linter
+    const household = await this.getCurrentHousehold();
+    if (!household) {
+      return { household: null, members: [] };
+    }
+    const members = await this.listMembers(household.id);
+    return { household, members };
+  }
+
   // ChoreRepo
   async listChores(householdId: string): Promise<ChoreTemplate[]> {
     return db.choreTemplates

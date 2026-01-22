@@ -2,6 +2,7 @@ import { supabase } from '../../lib/supabase/client';
 import { generateJoinCode } from '../../lib/joinCode';
 import type { HouseholdRepo, MemberRepo } from './interfaces';
 import type { Household, Member } from '../types';
+import { mapMember } from './SupabaseMemberRepo';
 
 /**
  * Supabase household row type.
@@ -12,6 +13,19 @@ interface SupabaseHouseholdRow {
   join_code: string;
   created_at: string;
   created_by?: string;
+}
+
+/**
+ * Supabase household row with nested members.
+ */
+interface SupabaseHouseholdWithMembersRow extends SupabaseHouseholdRow {
+  members: Array<{
+    id: string;
+    household_id: string;
+    user_id: string;
+    display_name: string;
+    avatar_id: string;
+  }>;
 }
 
 /**
@@ -163,6 +177,47 @@ export class SupabaseHouseholdRepo implements HouseholdRepo {
    */
   async listMembers(householdId: string): Promise<Member[]> {
     return this.memberRepo.listMembersByHousehold(householdId);
+  }
+
+  /**
+   * Gets the current household with all its members in a single query.
+   * This eliminates the sequential waterfall of getCurrentHousehold + listMembers.
+   * 
+   * @param member - Optional member to use instead of fetching. If not provided, will fetch via memberRepo.
+   */
+  async getCurrentHouseholdWithMembers(member?: Member | null): Promise<{ household: Household | null; members: Member[] }> {
+    // Use provided member or fetch if not provided
+    const currentMember = member ?? await this.memberRepo.getCurrentMember();
+    
+    if (!currentMember) {
+      return { household: null, members: [] };
+    }
+
+    // Single query with nested members using Supabase foreign key relationship
+    const { data: householdData, error: householdError } = await supabase
+      .from('households')
+      .select(`
+        *,
+        members (*)
+      `)
+      .eq('id', currentMember.householdId)
+      .single();
+
+    if (householdError) {
+      if (householdError.code === 'PGRST116') {
+        return { household: null, members: [] };
+      }
+      throw new Error(`Failed to get household: ${householdError.message}`);
+    }
+
+    if (!householdData) {
+      return { household: null, members: [] };
+    }
+
+    const household = mapHousehold(householdData as SupabaseHouseholdRow);
+    const members = ((householdData as SupabaseHouseholdWithMembersRow).members || []).map(mapMember);
+    
+    return { household, members };
   }
 }
 
