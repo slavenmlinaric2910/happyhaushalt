@@ -11,7 +11,9 @@
     "test": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:e2e": "playwright test",
-    "generate-icons": "node scripts/generate-pwa-icons.js"
+    "generate-icons": "node scripts/generate-pwa-icons.js",
+    "lhci": "lhci autorun",
+    "lighthouse:baseline": "lhci autorun --collect.url=http://localhost:4173/household"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.90.0",
@@ -23,6 +25,7 @@
     "react-router-dom": "^6.20.0"
   },
   "devDependencies": {
+    "@lhci/cli": "^0.12.0",
     "@playwright/test": "^1.40.0",
     "@testing-library/jest-dom": "^6.1.4",
     "@testing-library/react": "^14.1.2",

@@ -5,6 +5,7 @@ stages:
   - typecheck
   - test
   - build
+  - lighthouse
 
 cache:
   key: ${CI_COMMIT_REF_SLUG}
@@ -39,3 +40,23 @@ build:
     paths:
       - dist/
     expire_in: 7 days
+
+lighthouse:
+  stage: lighthouse
+  image: node:20
+  dependencies:
+    - build
+  before_script:
+    - npm ci --cache .npm --prefer-offline --legacy-peer-deps
+  script:
+    - npm run build
+    - npm run lhci
+  artifacts:
+    when: always
+    paths:
+      - .lighthouseci/
+    expire_in: 30 days
+  only:
+    - merge_requests
+    - main
+    - feature/baseline-lighthouse-ci-implementation
