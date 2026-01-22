@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 import { db } from '../offline/db';
 import type {
   Household,
@@ -5,6 +7,7 @@ import type {
   ChoreTemplate,
   TaskInstance,
   Task,
+  CreateTaskInput,
 } from '../types';
 import { generateId } from '../../lib/utils';
 import type { HouseholdRepo, ChoreRepo, TaskRepo } from './interfaces';
@@ -111,8 +114,26 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
   }
 
   // TaskRepo interface implementation (Supabase-style)
-  async createTask(): Promise<Task> {
-    // This is a stub - LocalDexieRepo is being phased out in favor of Supabase
+  async createTask(input: CreateTaskInput): Promise<Task>;
+  async createTask(data: {
+    name: string;
+    area: string;
+    dueDate: Date;
+    assignedMemberId: string;
+    householdId: string;
+  }): Promise<TaskInstance>;
+  async createTask(
+    _input:
+      | CreateTaskInput
+      | {
+          name: string;
+          area: string;
+          dueDate: Date;
+          assignedMemberId: string;
+          householdId: string;
+        }
+  ): Promise<Task | TaskInstance> {
+    // Local Dexie path is deprecated; direct callers to SupabaseTaskRepo
     throw new Error('createTask not implemented in LocalDexieRepo. Use SupabaseTaskRepo instead.');
   }
 
@@ -167,7 +188,8 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
     await this.offlineEngine.enqueue('COMPLETE_TASK', { taskId });
   }
 
-  async regenerateTasksIfNeeded(householdId: string): Promise<void> {
+  async regenerateTasksIfNeeded(householdId?: string): Promise<void> {
+    if (!householdId) return;
     // Simple implementation: check if tasks exist for the next 7 days
     const today = new Date();
     today.setHours(0, 0, 0, 0);

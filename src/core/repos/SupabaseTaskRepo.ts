@@ -40,18 +40,45 @@ function mapTask(row: SupabaseTaskRow): Task {
 
 export class SupabaseTaskRepo implements TaskRepo {
   /**
-   * Creates a new task in the database.
+   * Creates a new task in the database (primary supabase pathway).
    */
-  async createTask(input: CreateTaskInput): Promise<Task> {
+  async createTask(input: CreateTaskInput): Promise<Task>;
+  /**
+   * Legacy signature kept for interface compatibility; not supported in Supabase implementation.
+   */
+  async createTask(data: {
+    name: string;
+    area: string;
+    dueDate: Date;
+    assignedMemberId: string;
+    householdId: string;
+  }): Promise<TaskInstance>;
+  async createTask(
+    input:
+      | CreateTaskInput
+      | {
+          name: string;
+          area: string;
+          dueDate: Date;
+          assignedMemberId: string;
+          householdId: string;
+        }
+  ): Promise<Task | TaskInstance> {
+    // Enforce using the Supabase-specific input; legacy path is unsupported here
+    if (!('assignedUserId' in input)) {
+      throw new Error('Legacy createTask signature is not supported in SupabaseTaskRepo');
+    }
+
+    const supabaseInput = input as CreateTaskInput;
     const { data, error } = await supabase
       .from('tasks')
       .insert({
-        household_id: input.householdId,
-        template_id: input.templateId,
-        title: input.title,
-        due_date: input.dueDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
-        assigned_user_id: input.assignedUserId,
-        status: input.status,
+        household_id: supabaseInput.householdId,
+        template_id: supabaseInput.templateId,
+        title: supabaseInput.title,
+        due_date: supabaseInput.dueDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+        assigned_user_id: supabaseInput.assignedUserId,
+        status: supabaseInput.status,
       })
       .select()
       .single();

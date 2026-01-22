@@ -1,8 +1,8 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
-import { useHouseholdRepo } from '../../app/providers/RepoProvider';
+import { useHouseholdRepo, useMemberRepo } from '../../app/providers/RepoProvider';
 import { SupabaseTaskRepo } from '../../core/repos/SupabaseTaskRepo';
 import { supabase } from '../../lib/supabase/client';
 import styles from './CreateTaskPage.module.css';
@@ -20,12 +20,13 @@ const AREAS = [
   'Garden',
   'Other',
 ];
+const taskRepo = new SupabaseTaskRepo();
+
 
 export function CreateTaskPage() {
   const navigate = useNavigate();
-  const repo = useRepo();
-  const memberRepo = useMemberRepo();
   const householdRepo = useHouseholdRepo();
+  const memberRepo = useMemberRepo();
   const queryClient = useQueryClient();
 
   const [name, setName] = useState('');
@@ -33,21 +34,24 @@ export function CreateTaskPage() {
   const [dueDate, setDueDate] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
 
-  // // Fetch household
-  // const { data: household } = useQuery({
-  //   queryKey: ['household'],
-  //   queryFn: () => repo.getCurrentHousehold(),
-  // });
+  const { data: household } = useQuery({
+    queryKey: ['household'],
+    queryFn: () => householdRepo.getCurrentHousehold(),
+  });
 
-  // // Fetch members for assignee dropdown
-  // const { data: members = [] } = useQuery({
-  //   queryKey: ['members', household?.id],
-  //   queryFn: async () => {
-  //     if (!household) return [];
-  //     return memberRepo.listMembersByHousehold(household.id);
-  //   },
-  //   enabled: !!household,
-  // });
+  const { data: members = [], isLoading: membersLoading } = useQuery({
+    queryKey: ['members', household?.id],
+    queryFn: async () => {
+      if (!household) return [];
+      return memberRepo.listMembersByHousehold(household.id);
+    },
+    enabled: !!household,
+  });
+
+  const assignees = members.filter(
+    (member): member is (typeof members)[number] & { userId: string } =>
+      Boolean(member.userId)
+  );
 
   // Create task mutation
   const createTaskMutation = useMutation({
@@ -67,10 +71,10 @@ export function CreateTaskPage() {
       // Create task using SupabaseTaskRepo
       const taskInput = {
         householdId: currentHousehold.id,
-        templateId: null, // No template for manual task
+        templateId: null,
         title: name.trim(),
         dueDate: new Date(dueDate),
-        assignedUserId: session.user.id, // Current authenticated user
+        assignedUserId: assigneeId,
         status: 'open' as const,
       };
 
@@ -85,14 +89,14 @@ export function CreateTaskPage() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim() || !dueDate) {
+    if (!name.trim() || !dueDate || !area || !assigneeId) {
       return;
     }
 
     createTaskMutation.mutate();
   };
 
-  const isFormValid = name.trim() && dueDate;
+  const isFormValid = name.trim() && dueDate && area && assigneeId;
 
   // Get today's date in YYYY-MM-DD format for min date
   const today = new Date().toISOString().split('T')[0];
@@ -141,8 +145,6 @@ export function CreateTaskPage() {
           />
         </div>
 
-        {/* Area and Assignee fields commented out for now - will use test data */}
-        {/*
         <div className={styles.field}>
           <label htmlFor="area" className={styles.label}>
             Area <span className={styles.required}>*</span>
@@ -175,18 +177,18 @@ export function CreateTaskPage() {
             value={assigneeId}
             onChange={(e) => setAssigneeId(e.target.value)}
             required
+            disabled={membersLoading || assignees.length === 0}
           >
             <option value="" disabled>
-              Select a member
+              {membersLoading ? 'Loading members...' : 'Select a member'}
             </option>
-            {members.map((member) => (
-              <option key={member.id} value={member.id}>
+            {assignees.map((member) => (
+              <option key={member.id} value={member.userId}>
                 {member.displayName}
               </option>
             ))}
           </select>
         </div>
-        */}
 
         <button
           type="submit"
