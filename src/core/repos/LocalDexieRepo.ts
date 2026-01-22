@@ -54,6 +54,7 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
     // LocalDexieRepo doesn't need member parameter, but accepts it for interface compatibility
     // It can get household directly without needing member.householdId
     // Parameter prefixed with _ to indicate intentionally unused
+    void _member; // Explicitly mark as used to satisfy linter
     const household = await this.getCurrentHousehold();
     if (!household) {
       return { household: null, members: [] };

@@ -40,7 +40,7 @@ export function HouseholdPage() {
   });
 
   const household = householdData?.household;
-  const members = householdData?.members || [];
+  const members = useMemo(() => householdData?.members || [], [householdData?.members]);
 
   const handleCopyCode = async () => {
     if (household?.joinCode) {
