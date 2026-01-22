@@ -1,3 +1,20 @@
+## App Initialization (Provider Order)
+
+The app boots with a strict provider nesting to ensure offline and auth state are ready before routing:
+
+```
+QueryClientProvider
+  → OfflineEngineProvider (creates offline engine)
+    → RepoProvider (injects repos + engine)
+      → AuthProvider (Supabase auth session)
+        → BrowserRouter
+          → BootstrapGuard (auth/member routing gate)
+            → Routes
+```
+
+BootstrapGuard waits for auth, fetches the current member, and routes to `/login` → `/onboarding` → app routes (`/tasks`, `/household`) accordingly.
+
+---
 
 ---
 
@@ -41,6 +58,15 @@ Typical interfaces:
 - Local implementations persist/read via Dexie (offline source of truth per device)
 - Remote implementations call Supabase (used by sync and/or initial hydration)
 - Feature code only depends on repo interfaces, never on Dexie/Supabase directly
+
+---
+
+## Navigation (MVP)
+
+- Tasks (`/tasks`): integrated tasks view (today and chores merged)
+- Create Task (`/tasks/create`): modal/flow to add a task
+- Household (`/household`): join code and members list
+- Auth (`/login`) and onboarding (`/onboarding`) are public routes gated by BootstrapGuard.
 
 ---
 
