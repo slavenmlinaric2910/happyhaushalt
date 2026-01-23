@@ -233,8 +233,4 @@ docs/
 
 ## Next Steps (from project-log.md)
 
-- Implement Create Task modal form.
-- Implement Create Chore template form + chore management page.
-- Expand task filtering/sorting on Tasks page.
-- Implement full sync in `RemoteRepoStub` (currently a stub).
 - Add testing coverage for task completion flow.

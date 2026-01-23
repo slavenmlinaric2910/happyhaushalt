@@ -77,6 +77,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
   if (!context) {
+    // During Vite React Refresh, modules/providers can be transiently reloaded,
+    // and consumers may render for a moment before the provider is re-mounted.
+    // Returning a safe fallback avoids dev-time crashes without changing prod behavior.
+    if (import.meta.hot) {
+      return {
+        loading: true,
+        session: null,
+        user: null,
+        signInWithGoogle: async () => {},
+        signOut: async () => {},
+      };
+    }
     throw new Error('useAuth must be used within AuthProvider');
   }
   return context;

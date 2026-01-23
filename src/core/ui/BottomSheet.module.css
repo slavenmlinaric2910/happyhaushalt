@@ -71,13 +71,24 @@
   border-color: #d1d5db;
 }
 
-.optionIcon {
+.optionIconPrimary {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 40px;
   height: 40px;
   background: #6366f1;
+  color: white;
+  border-radius: 0.5rem;
+}
+
+.optionIconSecondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #10b981;
   color: white;
   border-radius: 0.5rem;
 }

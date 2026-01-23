@@ -8,6 +8,7 @@ import type {
   TaskInstance,
   Task,
   CreateTaskInput,
+  CreateChoreInput,
 } from '../types';
 import { generateId } from '../../lib/utils';
 import type { HouseholdRepo, ChoreRepo, TaskRepo } from './interfaces';
@@ -72,24 +73,27 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
     return db.choreTemplates
       .where('householdId')
       .equals(householdId)
-      .and((chore) => !chore.isArchived)
+      .and((chore) => chore.active)
       .toArray();
   }
 
   async createChore(
-    data: Omit<ChoreTemplate, 'id' | 'householdId' | 'rotationCursor' | 'isArchived'>
+    householdId: string,
+    data: CreateChoreInput
   ): Promise<ChoreTemplate> {
-    const household = await this.getCurrentHousehold();
-    if (!household) {
-      throw new Error('No household found');
-    }
-
+    const now = new Date();
     const chore: ChoreTemplate = {
-      ...data,
       id: generateId(),
-      householdId: household.id,
-      rotationCursor: 0,
-      isArchived: false,
+      householdId,
+      name: data.name,
+      frequency: data.frequency,
+      active: true,
+      rotationMemberIds: data.rotationMemberIds,
+      dueDate: data.dueDate,
+      startDate: data.startDate,
+      area: data.area,
+      createdAt: now,
+      updatedAt: now,
     };
 
     await db.choreTemplates.add(chore);
@@ -110,7 +114,7 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
   }
 
   async archiveChore(id: string): Promise<void> {
-    await db.choreTemplates.update(id, { isArchived: true });
+    await db.choreTemplates.update(id, { active: false });
     await this.offlineEngine.enqueue('ARCHIVE_CHORE', { id });
   }
 
@@ -160,6 +164,7 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
   }): Promise<TaskInstance> {
     // Create a virtual chore template for one-time tasks
     const choreTemplateId = `manual-${generateId()}`;
+    const now = new Date();
     
     const task: TaskInstance = {
       id: generateId(),
@@ -176,11 +181,13 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
       id: choreTemplateId,
       householdId: data.householdId,
       name: data.name,
+      frequency: 'daily', // Default for one-time task
+      active: true,
+      rotationMemberIds: [data.assignedMemberId],
+      dueDate: data.dueDate,
       area: data.area,
-      frequencyType: 'custom',
-      frequencyValue: 0, // One-time task
-      rotationCursor: 0,
-      isArchived: false,
+      createdAt: now,
+      updatedAt: now,
     };
 
     await db.choreTemplates.add(choreTemplate);
@@ -219,14 +226,20 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
     for (const chore of chores) {
       const tasksForChore = existingTasks.filter((t) => t.choreTemplateId === chore.id);
       if (tasksForChore.length === 0) {
-        // Generate a task for today
-        const assignedMember = members[chore.rotationCursor % members.length];
+        // Generate a task for today using rotationMemberIds
+        const rotationMembers = chore.rotationMemberIds || [];
+        const assignedMemberId = rotationMembers.length > 0 
+          ? rotationMembers[0] 
+          : members[0]?.id;
+        
+        if (!assignedMemberId) continue;
+
         const task: TaskInstance = {
           id: generateId(),
           householdId,
           choreTemplateId: chore.id,
           dueDate: today,
-          assignedMemberId: assignedMember.id,
+          assignedMemberId,
           status: 'pending',
           completedAt: null,
         };
