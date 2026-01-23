@@ -7,6 +7,8 @@ test('app loads and shows login page', async ({ page }) => {
   const h1 = page.locator('h1');
   // Should see Home Chores (the app title) on login page
   await expect(h1).toContainText('Home Chores', { timeout: 10000 });
+  // And the primary auth button should be visible
+  await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
 });
 
 test('navigation works after app loads', async ({ page }) => {

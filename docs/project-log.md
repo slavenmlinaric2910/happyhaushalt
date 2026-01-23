@@ -203,3 +203,52 @@ Goal: maintain a short, continuous record (weekly) of what was planned and deliv
 - Test production build and verify Lighthouse metrics
 - Monitor real-world performance improvements
 - Consider further optimizations if needed
+
+---
+
+## Week 3 — Offline Read Support (started 2026-01-23)
+
+### Plan
+- Implement offline-first data loading for HouseholdPage
+- Create connectivity detection service that checks both browser and backend status
+- Build reusable `useOfflineQuery` hook that bridges TanStack Query with Dexie
+- Ensure pages work when refreshing while offline
+
+### Done
+- **Connectivity Detection**:
+  - Created `ConnectivityService` that monitors `navigator.onLine` and Supabase backend reachability
+  - Implements periodic health checks (every 30 seconds) when online
+  - Provides reactive `useConnectivity` hook for components
+  - Sets initial status synchronously on page load to avoid race conditions
+- **Offline Query Hook**:
+  - Created `useOfflineQuery` hook that wraps TanStack Query's `useQuery`
+  - Automatically reads from Dexie when offline or during connectivity check
+  - Syncs data from Supabase to Dexie when online
+  - Handles 'checking' status to prefer cached data during page refresh
+- **HouseholdPage Migration**:
+  - Migrated `['member', userId]` query to use `useOfflineQuery` with Dexie sync
+  - Migrated `['household-with-members', userId]` query to use `useOfflineQuery`
+  - Both queries now work offline by reading from IndexedDB
+- **BootstrapGuard Migration**:
+  - Migrated member query to support offline (critical for app initialization)
+  - App can now start even when offline if member data was previously cached
+
+### Decisions
+- Used `supabase.auth.getSession()` for lightweight backend health check (fast, doesn't require auth)
+- Treat 'checking' status as offline in queries (prefers cached data to avoid race conditions)
+- Set initial connectivity status synchronously based on `navigator.onLine` (immediate offline detection)
+- Used `bulkPut()` for arrays in Dexie (more efficient than individual `put()` calls)
+- Set `staleTime: Infinity` when offline (never refetch when offline)
+- Set `gcTime: Infinity` in TanStack Query (Dexie is source of truth for persistence)
+
+### Testing Performed
+- ✅ Offline page refresh works (data loads from Dexie immediately)
+- ✅ Online → offline transition (queries switch to cached data)
+- ✅ Offline → online transition (queries refetch and update Dexie)
+- ✅ Connectivity detection (checks both browser and backend status)
+- ✅ Data persistence across browser restarts
+
+### Next
+- Migrate HomePage/Tasks page queries to offline support (after other team member completes real data implementation)
+- Consider adding UI indicators for offline state
+- Evaluate offline write support (outbox pattern already exists)

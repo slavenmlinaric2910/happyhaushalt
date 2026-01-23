@@ -1,20 +1,37 @@
+import { useState } from 'react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Fragment } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
-import { ListTodo, Plus, Users } from 'lucide-react';
+import { ListTodo, Users } from 'lucide-react';
 import { OfflineBanner } from '../../core/ui/OfflineBanner';
+import { BottomSheet } from '../../core/ui/BottomSheet';
 import styles from './AppLayout.module.css';
 
 export function AppLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const navItems = [
     { path: '/tasks', icon: ListTodo, label: 'Tasks' },
     { path: '/household', icon: Users, label: 'Household' },
   ];
 
+  const handleCreateClick = () => {
+    setIsSheetOpen(true);
+  };
+
+  const handleCloseSheet = () => {
+    setIsSheetOpen(false);
+  };
+
   const handleCreateTask = () => {
-    // TODO: Implement create task modal/dialog
-    console.log('Create new task');
+    setIsSheetOpen(false);
+    navigate('/tasks/create');
+  };
+
+  const handleCreateChore = () => {
+    setIsSheetOpen(false);
+    navigate('/chores/create');
   };
 
   return (
@@ -34,11 +51,11 @@ export function AppLayout() {
               <Fragment key={`nav-${index}`}>
                 <button
                   key="create"
-                  onClick={handleCreateTask}
+                  onClick={handleCreateClick}
                   className={styles.navItemCreate}
                   aria-label="Create task"
                 >
-                  <Plus size={28} />
+                  <span className={styles.plusIcon}>+</span>
                 </button>
                 <Link
                   key={item.path}
@@ -64,6 +81,12 @@ export function AppLayout() {
           );
         })}
       </nav>
+      <BottomSheet
+        isOpen={isSheetOpen}
+        onClose={handleCloseSheet}
+        onCreateTask={handleCreateTask}
+        onCreateChore={handleCreateChore}
+      />
     </div>
   );
 }

@@ -7,6 +7,8 @@ import { RepoProvider } from './providers/RepoProvider';
 import { AuthProvider } from './providers/AuthProvider';
 import { BootstrapGuard } from './components/BootstrapGuard';
 import { AppLayout } from './layout/AppLayout';
+import { CreateTaskPage } from '../features/tasks/CreateTaskPage';
+import { CreateChorePage } from '../features/chores/CreateChorePage';
 import { LoadingView } from './components/LoadingView';
 
 // Lazy load routes for code splitting
@@ -14,6 +16,7 @@ const HomePage = lazy(() => import('../features/home/HomePage').then(module => (
 const HouseholdPage = lazy(() => import('../features/household/HouseholdPage').then(module => ({ default: module.HouseholdPage })));
 const OnboardingPage = lazy(() => import('../features/onboarding/OnboardingPage').then(module => ({ default: module.OnboardingPage })));
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then(module => ({ default: module.LoginPage })));
+const AboutPage = lazy(() => import('../features/auth/AboutPage').then(module => ({ default: module.AboutPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +33,7 @@ function AppRoutes() {
       <Suspense fallback={<LoadingView />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/about" element={<AboutPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route
             path="/"
@@ -37,6 +41,8 @@ function AppRoutes() {
           >
             <Route index element={<Navigate to="/tasks" replace />} />
             <Route path="tasks" element={<HomePage />} />
+            <Route path="tasks/create" element={<CreateTaskPage />} />
+            <Route path="chores/create" element={<CreateChorePage />} />
             <Route path="household" element={<HouseholdPage />} />
           </Route>
         </Routes>
@@ -61,4 +67,3 @@ export function App() {
     </QueryClientProvider>
   );
 }
-
