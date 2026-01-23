@@ -6,6 +6,7 @@ import { HouseMoodCard } from './HouseMoodCard';
 import styles from './HomePage.module.css';
 import {TaskListSection} from './TaskListSection';
 import { Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Dev-Flag anlegen zum Testen
 const IS_DEV_MOCK = true;
@@ -49,6 +50,7 @@ function groupTasksByDueDate<T extends TaskLike>(tasks: T[], today: Date) {
 export function HomePage() {
   const repo = useRepo();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: household } = useQuery({
     queryKey: ['household'],
@@ -139,6 +141,19 @@ export function HomePage() {
     await queryClient.invalidateQueries({ queryKey: ['tasks'] });
   };
 
+  const handleDeleteTask = async (taskId: string) => {
+    // Falls dein Repo eine deleteTask-Methode hat:
+    // await repo.deleteTask(taskId);
+    // Bis es das gibt, könntest du hier erstmal nur loggen oder einen TODO lassen.
+    console.log('delete task', taskId);
+    await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+  };
+
+  const handleEditTask = (taskId: string) => {
+    // Beispiel: auf einen Edit-Screen navigieren
+    navigate(`/tasks/${taskId}/edit`);
+  };
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -165,6 +180,8 @@ export function HomePage() {
           tasks={overdueTasks}
           choreById={choreById}
           onToggleComplete={handleCompleteTask}
+          onDeleteTask={handleDeleteTask}
+          onEditTask={handleEditTask}
         />
         <TaskListSection
           title="Due today"
@@ -172,6 +189,8 @@ export function HomePage() {
           tasks={todayTasks}
           choreById={choreById}
           onToggleComplete={handleCompleteTask}
+          onDeleteTask={handleDeleteTask}
+          onEditTask={handleEditTask}
         />
         <TaskListSection
           title="Upcoming"
@@ -179,6 +198,8 @@ export function HomePage() {
           tasks={upcomingTasks}
           choreById={choreById}
           onToggleComplete={handleCompleteTask}
+          onDeleteTask={handleDeleteTask}
+          onEditTask={handleEditTask}
         />
       </section>
 

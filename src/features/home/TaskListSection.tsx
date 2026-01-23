@@ -1,115 +1,67 @@
-import { Card } from '../../core/ui/Card';
-import styles from './HomePage.module.css';
+import { SwipeableTaskItem } from './SwipeableTaskItem';
+import styles from './TaskListSection.module.css';
 
+// Falls du TaskLike schon an anderer Stelle definiert hast,
+// kannst du diesen Typ hier weglassen und den bestehenden importieren.
 type TaskLike = {
   id: string;
   choreTemplateId: string;
   dueDate: string | Date;
   completedAt?: string | Date | null;
-  assignedMemberId?: string;
-};
-
-type ChoreInfo = {
-  name: string;
-  area: string;
-};
-
-type MemberInfo = {
-  id: string;
-  displayName: string;
-  color?: string;
 };
 
 type TaskListSectionProps = {
   title: string;
   emptyMessage: string;
   tasks: TaskLike[];
-  choreById: Map<string, ChoreInfo>;
-  memberById?: Map<string, MemberInfo>;
+  choreById: Map<string, { name: string; area: string }>;
   onToggleComplete: (taskId: string) => void;
+  onDeleteTask: (taskId: string) => void;
+  onEditTask: (taskId: string) => void;
 };
-
-// einfacher Avatar aus Initialen
-function MemberAvatar({ member }: { member?: MemberInfo }) {
-  const label = member?.displayName ?? '?';
-  const initial = label.charAt(0).toUpperCase();
-
-  // einfache Pastellfarbe, wenn nichts gesetzt ist
-  const bg = member?.color ?? '#fde68a'; // warmes Gelb
-  return (
-    <div className={styles.memberAvatar} aria-label={label}>
-      <span
-        className={styles.memberAvatarCircle}
-        style={{ backgroundColor: bg }}
-      >
-        {initial}
-      </span>
-    </div>
-  );
-}
 
 export function TaskListSection({
                                   title,
                                   emptyMessage,
                                   tasks,
                                   choreById,
-                                  memberById,
                                   onToggleComplete,
+                                  onDeleteTask,
+                                  onEditTask,
                                 }: TaskListSectionProps) {
+  if (!tasks.length) {
+    return (
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>{title}</h2>
+        <p className={styles.emptyMessage}>{emptyMessage}</p>
+      </section>
+    );
+  }
+
   return (
-    <>
-      <h2 className={styles.sectionHeader}>{title}</h2>
-      {tasks.length === 0 ? (
-        <p className={styles.emptyState}>{emptyMessage}</p>
-      ) : (
-        <div className={styles.tasksList}>
-          {tasks.map((task) => {
-            const template = choreById.get(task.choreTemplateId);
-            const taskTitle = template?.name ?? 'Task';
-            const area = template?.area;
+    <section className={styles.section}>
+      <h2 className={styles.sectionTitle}>{title}</h2>
+      <div className={styles.list}>
+        {tasks.map((task) => {
+          const chore = choreById.get(task.choreTemplateId);
+          const titleText = chore?.name ?? 'Task';
+          const subtitleText = chore?.area
+            ? `${chore.area} – fällig am ${new Date(task.dueDate).toLocaleDateString()}`
+            : `Fällig am ${new Date(task.dueDate).toLocaleDateString()}`;
 
-            const isCompleted = !!task.completedAt;
-            const member =
-              task.assignedMemberId && memberById
-                ? memberById.get(task.assignedMemberId)
-                : undefined;
-
-            const handleClick = () => {
-              if (onToggleComplete) {
-                onToggleComplete(task.id);
-              }
-            };
-
-            return (
-              <Card
-                key={task.id}
-                className={styles.taskTile}
-                onClick={handleClick}
-              >
-                <div className={styles.taskContent}>
-                  {/* Avatar anstelle der Checkbox */}
-                  <MemberAvatar member={member} />
-
-                  <div className={styles.taskInfo}>
-                    <h3 className={styles.taskTitle}>{taskTitle}</h3>
-                    {area && (
-                      <span className={styles.taskArea}>
-                        {area}
-                        {member ? ` • ${member.displayName}` : null}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* optional kleiner Status-Punkt rechts */}
-                  {isCompleted && (
-                    <span className={styles.taskStatusDot} aria-hidden="true" />
-                  )}
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-    </>
+          return (
+            <SwipeableTaskItem
+              key={task.id}
+              id={task.id}
+              title={titleText}
+              subtitle={subtitleText}
+              onComplete={onToggleComplete}
+              onDelete={onDeleteTask}
+              onEdit={onEditTask}
+            />
+          );
+        })}
+      </div>
+    </section>
   );
 }
