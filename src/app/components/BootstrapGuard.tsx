@@ -1,8 +1,10 @@
 import { useEffect, useRef, ReactNode } from 'react';
 import { useLocation, Navigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../providers/AuthProvider';
 import { useMemberRepo } from '../providers/RepoProvider';
+import { useOfflineQuery } from '../hooks/useOfflineQuery';
+import { db } from '../../core/offline/db';
 import { LoadingView } from './LoadingView';
 
 interface BootstrapGuardProps {
@@ -18,12 +20,25 @@ export function BootstrapGuard({ children }: BootstrapGuardProps) {
   const lastPathnameRef = useRef<string>(location.pathname);
 
   // Fetch member via React Query (cached for reuse by other components)
-  const { data: member, isLoading: memberLoading, error: memberError } = useQuery({
+  const { data: member, isLoading: memberLoading, error: memberError } = useOfflineQuery({
     queryKey: ['member', userId],
     queryFn: () => memberRepo.getCurrentMember(),
     enabled: !!user, // Only fetch when user exists
     staleTime: 1000 * 60 * 5, // 5 minutes (member doesn't change often)
     refetchOnWindowFocus: false,
+    readFromDexie: async (key) => {
+      const [, userIdFromKey] = key;
+      if (!userIdFromKey || typeof userIdFromKey !== 'string') {
+        return null;
+      }
+      const member = await db.members.where('userId').equals(userIdFromKey).first();
+      return member || null;
+    },
+    writeToDexie: async (data) => {
+      if (data) {
+        await db.members.put(data);
+      }
+    },
   });
 
   // Handle navigation away from onboarding (member might have been created)

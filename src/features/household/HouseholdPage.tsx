@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useHouseholdRepo, useMemberRepo } from '../../app/providers/RepoProvider';
 import { useAuth } from '../../app/providers/AuthProvider';
+import { useOfflineQuery } from '../../app/hooks/useOfflineQuery';
+import { db } from '../../core/offline/db';
+import type { Household, Member } from '../../core/types';
 import { Card } from '../../core/ui/Card';
 import { Button } from '../../core/ui/Button';
 import { Users, Plus, UserPlus, LogOut, Lock, ThumbsUp, ArrowRight } from 'lucide-react';
@@ -17,10 +19,23 @@ export function HouseholdPage() {
   const userId = user?.id || '';
 
   // Fetch member via React Query (will use cache if BootstrapGuard already fetched it)
-  const { data: member } = useQuery({
+  const { data: member } = useOfflineQuery({
     queryKey: ['member', userId],
     queryFn: () => memberRepo.getCurrentMember(),
     staleTime: 1000 * 60 * 5, // 5 minutes (member doesn't change often)
+    readFromDexie: async (key) => {
+      const [, userIdFromKey] = key;
+      if (!userIdFromKey || typeof userIdFromKey !== 'string') {
+        return null;
+      }
+      const member = await db.members.where('userId').equals(userIdFromKey).first();
+      return member || null;
+    },
+    writeToDexie: async (data) => {
+      if (data) {
+        await db.members.put(data);
+      }
+    },
   });
 
   // Pass cached member to avoid duplicate getCurrentMember() call
@@ -28,7 +43,7 @@ export function HouseholdPage() {
     data: householdData,
     isLoading,
     error: householdError,
-  } = useQuery({
+  } = useOfflineQuery<{ household: Household | null; members: Member[] }>({
     queryKey: ['household-with-members', userId],
     queryFn: async () => {
       const result = await householdRepo.getCurrentHouseholdWithMembers(member);
@@ -37,6 +52,24 @@ export function HouseholdPage() {
     enabled: member !== undefined, // Wait for member query to resolve (even if null)
     refetchOnMount: 'always',
     staleTime: 1000 * 60, // 1 minute (shorter than default 5 min)
+    readFromDexie: async () => {
+      // Read first household from Dexie
+      const household = await db.households.toCollection().first();
+      if (!household) {
+        return { household: null, members: [] };
+      }
+      // Read members for this household
+      const members = await db.members.where('householdId').equals(household.id).toArray();
+      return { household, members };
+    },
+    writeToDexie: async (data) => {
+      if (data.household) {
+        await db.households.put(data.household);
+      }
+      if (data.members.length > 0) {
+        await db.members.bulkPut(data.members);
+      }
+    },
   });
 
   const household = householdData?.household;

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useConnectivity } from '../offline/connectivity';
+import { useConnectivity } from '../../app/hooks/useConnectivity';
 import { useOfflineEngine } from '../../app/hooks/useOfflineEngine';
 import styles from './OfflineBanner.module.css';
 import { Button } from './Button';
 
 export function OfflineBanner() {
-  const isOnline = useConnectivity();
+  const { isOnline } = useConnectivity();
   const { queueState, syncNow } = useOfflineEngine();
   const [showBanner, setShowBanner] = useState(false);
 
