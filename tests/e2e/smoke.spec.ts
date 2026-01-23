@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('app loads and shows login page', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
+  // Wait a bit for React to render
   await page.waitForTimeout(500);
   const h1 = page.locator('h1');
   // Should see Home Chores (the app title) on login page

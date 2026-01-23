@@ -21,6 +21,7 @@ export interface HouseholdRepo {
   joinByCode(code: string): Promise<Household>;
   getCurrentHousehold(): Promise<Household | null>;
   listMembers(householdId: string): Promise<Member[]>;
+  getCurrentHouseholdWithMembers(member?: Member | null): Promise<{ household: Household | null; members: Member[] }>;
 }
 
 export interface ChoreRepo {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { ListTodo, Users } from 'lucide-react';
+import { Fragment } from 'react';
+import { ListTodo, Plus, Users } from 'lucide-react';
 import { OfflineBanner } from '../../core/ui/OfflineBanner';
 import { SupabaseTaskRepo } from '../../core/repos/SupabaseTaskRepo';
 import { supabase } from '../../lib/supabase/client';
@@ -83,7 +84,7 @@ export function AppLayout() {
           // Insert create button between Tasks and Household
           if (index === 1) {
             return (
-              <>
+              <Fragment key={`nav-${index}`}>
                 <button
                   key="create"
                   onClick={handleCreateClick}
@@ -100,7 +101,7 @@ export function AppLayout() {
                   <Icon size={20} />
                   <span>{item.label}</span>
                 </Link>
-              </>
+              </Fragment>
             );
           }
 
