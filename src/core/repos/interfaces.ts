@@ -5,6 +5,7 @@ import type {
   TaskInstance,
   Task,
   CreateTaskInput,
+  CreateChoreInput,
 } from '../types';
 import type { Session } from '@supabase/supabase-js';
 
@@ -26,7 +27,7 @@ export interface HouseholdRepo {
 
 export interface ChoreRepo {
   listChores(householdId: string): Promise<ChoreTemplate[]>;
-  createChore(data: Omit<ChoreTemplate, 'id' | 'householdId' | 'rotationCursor' | 'isArchived'>): Promise<ChoreTemplate>;
+  createChore(householdId: string, data: CreateChoreInput): Promise<ChoreTemplate>;
   updateChore(id: string, data: Partial<ChoreTemplate>): Promise<ChoreTemplate>;
   archiveChore(id: string): Promise<void>;
 }

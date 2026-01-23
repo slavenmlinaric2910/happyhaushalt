@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { useRepo } from '../../app/providers/RepoProvider';
+import { useRepo, useHouseholdRepo, useChoreRepo } from '../../app/providers/RepoProvider';
 import { IconButton } from '../../core/ui/IconButton';
 import { HouseMoodCard } from './HouseMoodCard';
 import styles from './HomePage.module.css';
@@ -48,11 +48,13 @@ function groupTasksByDueDate<T extends TaskLike>(tasks: T[], today: Date) {
 
 export function HomePage() {
   const repo = useRepo();
+  const householdRepo = useHouseholdRepo();
+  const choreRepo = useChoreRepo();
   const queryClient = useQueryClient();
 
   const { data: household } = useQuery({
     queryKey: ['household'],
-    queryFn: () => repo.getCurrentHousehold(),
+    queryFn: () => householdRepo.getCurrentHousehold(),
   });
 
   const today = useMemo(() => {
@@ -114,7 +116,7 @@ export function HomePage() {
     queryKey: ['chores', household?.id],
     queryFn: async () => {
       if (!household) return [];
-      return repo.listChores(household.id);
+      return choreRepo.listChores(household.id);
     },
     enabled: !!household,
   });
@@ -122,7 +124,7 @@ export function HomePage() {
   const choreById = useMemo(() => {
     const map = new Map<string, { name: string; area: string }>();
     for (const c of chores) {
-      map.set(c.id, { name: c.name, area: c.area });
+      map.set(c.id, { name: c.name, area: c.area || 'Other' });
     }
 
     if (IS_DEV_MOCK) {

@@ -16,17 +16,31 @@ export interface Member {
   userId?: string; // user_id from Supabase, used to identify owner
 }
 
+/**
+ * ChoreTemplate entity matching the database schema (chore_templates table).
+ */
 export interface ChoreTemplate {
   id: string;
   householdId: string;
   name: string;
-  area: string;
-  frequencyType: FrequencyType;
-  frequencyValue: number; // e.g., every N days/weeks/months
-  rotationCursor: number; // index for round-robin assignment
-  isArchived: boolean;
-  checklistItems?: string[];
+  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
+  active: boolean;
+  rotationMemberIds: string[]; // JSON array of member IDs for rotation/assignment
+  dueDate: Date | null; // end date for the chore
+  startDate?: Date | null; // optional start date
+  area?: string; // optional area field
+  createdAt: Date;
+  updatedAt: Date;
 }
+
+export type CreateChoreInput = {
+  name: string;
+  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
+  rotationMemberIds: string[];
+  dueDate: Date | null;
+  startDate?: Date | null;
+  area?: string;
+};
 
 export interface TaskInstance {
   id: string;

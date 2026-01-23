@@ -55,7 +55,7 @@ export function BottomSheet({
         <h2 className={styles.title}>Create New</h2>
         <div className={styles.options}>
           <button className={styles.option} onClick={onCreateTask}>
-            <div className={styles.optionIcon}>
+            <div className={styles.optionIconPrimary}>
               <ClipboardList size={20} />
             </div>
             <div className={styles.optionContent}>
@@ -65,17 +65,14 @@ export function BottomSheet({
               </div>
             </div>
           </button>
-          <button
-            className={`${styles.option} ${styles.optionDisabled}`}
-            onClick={onCreateChore}
-          >
-            <div className={`${styles.optionIcon} ${styles.optionIconDisabled}`}>
+          <button className={styles.option} onClick={onCreateChore}>
+            <div className={styles.optionIconSecondary}>
               <RefreshCw size={20} />
             </div>
             <div className={styles.optionContent}>
               <div className={styles.optionTitle}>Create Chore</div>
               <div className={styles.optionDescription}>
-                Coming soon — recurring tasks
+                Add a recurring task
               </div>
             </div>
           </button>
