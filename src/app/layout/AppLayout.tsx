@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Fragment } from 'react';
-import { ListTodo, Plus, Users } from 'lucide-react';
+import { ListTodo, Users } from 'lucide-react';
 import { OfflineBanner } from '../../core/ui/OfflineBanner';
 import { SupabaseTaskRepo } from '../../core/repos/SupabaseTaskRepo';
 import { supabase } from '../../lib/supabase/client';
