@@ -3,6 +3,8 @@ import type {
   Member,
   ChoreTemplate,
   TaskInstance,
+  Task,
+  CreateTaskInput,
 } from '../types';
 import type { Session } from '@supabase/supabase-js';
 
@@ -31,8 +33,16 @@ export interface ChoreRepo {
 
 export interface TaskRepo {
   listTasks(householdId: string, range: { start: Date; end: Date }): Promise<TaskInstance[]>;
+  createTask(data: {
+    name: string;
+    area: string;
+    dueDate: Date;
+    assignedMemberId: string;
+    householdId: string;
+  }): Promise<TaskInstance>;
+  createTask(input: CreateTaskInput): Promise<Task>;
   completeTask(taskId: string): Promise<void>;
-  regenerateTasksIfNeeded(householdId: string): Promise<void>;
+  regenerateTasksIfNeeded(): Promise<void>;
 }
 
 export interface MemberRepo {

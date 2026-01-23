@@ -7,6 +7,7 @@ import { RepoProvider } from './providers/RepoProvider';
 import { AuthProvider } from './providers/AuthProvider';
 import { BootstrapGuard } from './components/BootstrapGuard';
 import { AppLayout } from './layout/AppLayout';
+import { CreateTaskPage } from '../features/tasks/CreateTaskPage';
 import { LoadingView } from './components/LoadingView';
 
 // Lazy load routes for code splitting
@@ -37,6 +38,7 @@ function AppRoutes() {
           >
             <Route index element={<Navigate to="/tasks" replace />} />
             <Route path="tasks" element={<HomePage />} />
+            <Route path="tasks/create" element={<CreateTaskPage />} />
             <Route path="household" element={<HouseholdPage />} />
           </Route>
         </Routes>
@@ -61,4 +63,3 @@ export function App() {
     </QueryClientProvider>
   );
 }
-
