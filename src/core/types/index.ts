@@ -1,5 +1,11 @@
 export type FrequencyType = 'daily' | 'weekly' | 'monthly' | 'custom';
 
+export interface Area {
+  id: string;
+  key: string;
+  name: string;
+}
+
 export interface Household {
   id: string;
   name: string;
@@ -26,9 +32,9 @@ export interface ChoreTemplate {
   frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
   active: boolean;
   rotationMemberIds: string[]; // JSON array of member IDs for rotation/assignment
-  dueDate: Date | null; // end date for the chore
-  startDate?: Date | null; // optional start date
-  area?: string; // optional area field
+  startDate: Date | null; // optional start date
+  endDate: Date | null; // optional end date for the chore
+  areaId: string; // reference to areas table (required)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,9 +43,9 @@ export type CreateChoreInput = {
   name: string;
   frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
   rotationMemberIds: string[];
-  dueDate: Date | null;
-  startDate?: Date | null;
-  area?: string;
+  startDate: Date | null;
+  endDate: Date | null;
+  areaId: string; // required
 };
 
 export interface TaskInstance {
@@ -63,6 +69,7 @@ export interface Task {
   title: string;
   dueDate: Date;
   assignedUserId: string;
+  areaId?: string; // reference to areas table
   status: 'open' | 'done' | 'skipped';
   completedAt: Date | null;
   completedByUserId: string | null;

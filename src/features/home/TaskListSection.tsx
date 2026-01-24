@@ -11,7 +11,7 @@ type TaskLike = {
 
 type ChoreInfo = {
   name: string;
-  area: string;
+  areaId?: string;
 };
 
 type MemberInfo = {
@@ -66,7 +66,8 @@ export function TaskListSection({
           {tasks.map((task) => {
             const template = choreById.get(task.choreTemplateId);
             const taskTitle = template?.name ?? 'Task';
-            const area = template?.area;
+            // Note: areaId is now stored instead of area name
+            // We'll display the member info instead for now
 
             const isCompleted = !!task.completedAt;
             const member =
@@ -92,10 +93,9 @@ export function TaskListSection({
 
                   <div className={styles.taskInfo}>
                     <h3 className={styles.taskTitle}>{taskTitle}</h3>
-                    {area && (
+                    {member && (
                       <span className={styles.taskArea}>
-                        {area}
-                        {member ? ` • ${member.displayName}` : null}
+                        {member.displayName}
                       </span>
                     )}
                   </div>

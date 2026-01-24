@@ -6,6 +6,7 @@ import type {
   Task,
   CreateTaskInput,
   CreateChoreInput,
+  Area,
 } from '../types';
 import type { Session } from '@supabase/supabase-js';
 
@@ -54,5 +55,9 @@ export interface MemberRepo {
     displayName: string;
     avatarId: import('../../features/onboarding/avatars').AvatarId;
   }): Promise<Member>;
+}
+
+export interface AreaRepo {
+  listAreas(): Promise<Area[]>;
 }
 

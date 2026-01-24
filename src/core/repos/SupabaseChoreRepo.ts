@@ -9,7 +9,9 @@ interface ChoreTemplateRow {
   frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
   active: boolean;
   rotation_member_ids: string[];
-  due_date: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  area_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -22,7 +24,9 @@ function mapRowToChoreTemplate(row: ChoreTemplateRow): ChoreTemplate {
     frequency: row.frequency,
     active: row.active,
     rotationMemberIds: row.rotation_member_ids || [],
-    dueDate: row.due_date ? new Date(row.due_date) : null,
+    startDate: row.start_date ? new Date(row.start_date) : null,
+    endDate: row.end_date ? new Date(row.end_date) : null,
+    areaId: row.area_id,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };
@@ -53,7 +57,9 @@ export class SupabaseChoreRepo implements ChoreRepo {
         name: input.name,
         frequency: input.frequency,
         rotation_member_ids: input.rotationMemberIds,
-        due_date: input.dueDate ? input.dueDate.toISOString().split('T')[0] : null,
+        start_date: input.startDate ? input.startDate.toISOString().split('T')[0] : null,
+        end_date: input.endDate ? input.endDate.toISOString().split('T')[0] : null,
+        area_id: input.areaId,
         active: true,
       })
       .select()
@@ -74,8 +80,14 @@ export class SupabaseChoreRepo implements ChoreRepo {
     if (data.frequency !== undefined) updateData.frequency = data.frequency;
     if (data.active !== undefined) updateData.active = data.active;
     if (data.rotationMemberIds !== undefined) updateData.rotation_member_ids = data.rotationMemberIds;
-    if (data.dueDate !== undefined) {
-      updateData.due_date = data.dueDate ? data.dueDate.toISOString().split('T')[0] : null;
+    if (data.startDate !== undefined) {
+      updateData.start_date = data.startDate ? data.startDate.toISOString().split('T')[0] : null;
+    }
+    if (data.endDate !== undefined) {
+      updateData.end_date = data.endDate ? data.endDate.toISOString().split('T')[0] : null;
+    }
+    if (data.areaId !== undefined) {
+      updateData.area_id = data.areaId;
     }
 
     const { data: result, error } = await supabase

@@ -2,23 +2,9 @@ import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
-import { useHouseholdRepo, useMemberRepo } from '../../app/providers/RepoProvider';
+import { useHouseholdRepo, useMemberRepo, useAreaRepo } from '../../app/providers/RepoProvider';
 import { SupabaseChoreRepo } from '../../core/repos/SupabaseChoreRepo';
 import styles from './CreateChorePage.module.css';
-
-// Predefined areas for the household
-const AREAS = [
-  'Kitchen',
-  'Living Room',
-  'Bathroom',
-  'Bedroom',
-  'Balcony',
-  'Office',
-  'Hallway',
-  'Garage',
-  'Garden',
-  'Other',
-];
 
 const FREQUENCIES = [
   { value: 'daily', label: 'Daily' },
@@ -35,14 +21,20 @@ export function CreateChorePage() {
   const navigate = useNavigate();
   const householdRepo = useHouseholdRepo();
   const memberRepo = useMemberRepo();
+  const areaRepo = useAreaRepo();
   const queryClient = useQueryClient();
 
   const [name, setName] = useState('');
-  const [area, setArea] = useState('');
+  const [areaId, setAreaId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [frequency, setFrequency] = useState<FrequencyValue>('weekly');
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+
+  const { data: areas = [], isLoading: areasLoading } = useQuery({
+    queryKey: ['areas'],
+    queryFn: () => areaRepo.listAreas(),
+  });
 
   const { data: household } = useQuery({
     queryKey: ['household'],
@@ -86,9 +78,9 @@ export function CreateChorePage() {
         name: name.trim(),
         frequency,
         rotationMemberIds: selectedAssignees,
-        dueDate: dueDate ? new Date(dueDate) : null,
         startDate: startDate ? new Date(startDate) : null,
-        area,
+        endDate: dueDate ? new Date(dueDate) : null,
+        areaId: areaId,
       };
 
       return choreRepo.createChore(currentHousehold.id, choreInput);
@@ -102,14 +94,14 @@ export function CreateChorePage() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim() || !frequency || !area || selectedAssignees.length === 0) {
+    if (!name.trim() || !frequency || !areaId || selectedAssignees.length === 0) {
       return;
     }
 
     createChoreMutation.mutate();
   };
 
-  const isFormValid = name.trim() && frequency && area && selectedAssignees.length > 0;
+  const isFormValid = name.trim() && frequency && areaId && selectedAssignees.length > 0;
 
   // Get today's date in YYYY-MM-DD format for min date
   const today = new Date().toISOString().split('T')[0];
@@ -198,16 +190,17 @@ export function CreateChorePage() {
           <select
             id="area"
             className={styles.select}
-            value={area}
-            onChange={(e) => setArea(e.target.value)}
+            value={areaId}
+            onChange={(e) => setAreaId(e.target.value)}
             required
+            disabled={areasLoading}
           >
             <option value="" disabled>
-              Select an area
+              {areasLoading ? 'Loading areas...' : 'Select an area'}
             </option>
-            {AREAS.map((a) => (
-              <option key={a} value={a}>
-                {a}
+            {areas.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
               </option>
             ))}
           </select>
