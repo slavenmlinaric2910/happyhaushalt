@@ -12,6 +12,7 @@ interface SupabaseTaskRow {
   title: string;
   due_date: string;
   assigned_user_id: string;
+  area_id: string | null;
   status: 'open' | 'done' | 'skipped';
   completed_at: string | null;
   completed_by_user_id: string | null;
@@ -30,6 +31,7 @@ function mapTask(row: SupabaseTaskRow): Task {
     title: row.title,
     dueDate: new Date(row.due_date),
     assignedUserId: row.assigned_user_id,
+    areaId: row.area_id ?? undefined,
     status: row.status,
     completedAt: row.completed_at ? new Date(row.completed_at) : null,
     completedByUserId: row.completed_by_user_id,
@@ -78,6 +80,7 @@ export class SupabaseTaskRepo implements TaskRepo {
         title: supabaseInput.title,
         due_date: supabaseInput.dueDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
         assigned_user_id: supabaseInput.assignedUserId,
+        area_id: supabaseInput.areaId ?? null,
         status: supabaseInput.status,
       })
       .select()

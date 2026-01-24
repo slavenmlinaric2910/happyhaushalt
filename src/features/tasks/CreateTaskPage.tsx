@@ -2,24 +2,11 @@ import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
-import { useHouseholdRepo, useMemberRepo } from '../../app/providers/RepoProvider';
+import { useHouseholdRepo, useMemberRepo, useAreaRepo } from '../../app/providers/RepoProvider';
 import { SupabaseTaskRepo } from '../../core/repos/SupabaseTaskRepo';
 import { supabase } from '../../lib/supabase/client';
 import styles from './CreateTaskPage.module.css';
 
-// Predefined areas for the household
-const AREAS = [
-  'Kitchen',
-  'Living Room',
-  'Bathroom',
-  'Bedroom',
-  'Balcony',
-  'Office',
-  'Hallway',
-  'Garage',
-  'Garden',
-  'Other',
-];
 const taskRepo = new SupabaseTaskRepo();
 
 
@@ -27,12 +14,18 @@ export function CreateTaskPage() {
   const navigate = useNavigate();
   const householdRepo = useHouseholdRepo();
   const memberRepo = useMemberRepo();
+  const areaRepo = useAreaRepo();
   const queryClient = useQueryClient();
 
   const [name, setName] = useState('');
-  const [area, setArea] = useState('');
+  const [areaId, setAreaId] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
+
+  const { data: areas = [], isLoading: areasLoading } = useQuery({
+    queryKey: ['areas'],
+    queryFn: () => areaRepo.listAreas(),
+  });
 
   const { data: household } = useQuery({
     queryKey: ['household'],
@@ -75,6 +68,7 @@ export function CreateTaskPage() {
         title: name.trim(),
         dueDate: new Date(dueDate),
         assignedUserId: assigneeId,
+        areaId: areaId || undefined,
         status: 'open' as const,
       };
 
@@ -89,14 +83,14 @@ export function CreateTaskPage() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim() || !dueDate || !area || !assigneeId) {
+    if (!name.trim() || !dueDate || !areaId || !assigneeId) {
       return;
     }
 
     createTaskMutation.mutate();
   };
 
-  const isFormValid = name.trim() && dueDate && area && assigneeId;
+  const isFormValid = name.trim() && dueDate && areaId && assigneeId;
 
   // Get today's date in YYYY-MM-DD format for min date
   const today = new Date().toISOString().split('T')[0];
@@ -152,16 +146,17 @@ export function CreateTaskPage() {
           <select
             id="area"
             className={styles.select}
-            value={area}
-            onChange={(e) => setArea(e.target.value)}
+            value={areaId}
+            onChange={(e) => setAreaId(e.target.value)}
             required
+            disabled={areasLoading}
           >
             <option value="" disabled>
-              Select an area
+              {areasLoading ? 'Loading areas...' : 'Select an area'}
             </option>
-            {AREAS.map((a) => (
-              <option key={a} value={a}>
-                {a}
+            {areas.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
               </option>
             ))}
           </select>

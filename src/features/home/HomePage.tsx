@@ -122,15 +122,15 @@ export function HomePage() {
   });
 
   const choreById = useMemo(() => {
-    const map = new Map<string, { name: string; area: string }>();
+    const map = new Map<string, { name: string; areaId?: string }>();
     for (const c of chores) {
-      map.set(c.id, { name: c.name, area: c.area || 'Other' });
+      map.set(c.id, { name: c.name, areaId: c.areaId });
     }
 
     if (IS_DEV_MOCK) {
-      map.set('dishes', { name: 'Dishes', area: 'Kitchen' });
-      map.set('vacuum', { name: 'Vacuum', area: 'Living Room' });
-      map.set('plants', { name: 'Water plants', area: 'Balcony' });
+      map.set('dishes', { name: 'Dishes', areaId: undefined });
+      map.set('vacuum', { name: 'Vacuum', areaId: undefined });
+      map.set('plants', { name: 'Water plants', areaId: undefined });
     }
 
     return map;

@@ -4,7 +4,8 @@ import { SupabaseAuthRepo } from '../../core/repos/SupabaseAuthRepo';
 import { SupabaseHouseholdRepo } from '../../core/repos/SupabaseHouseholdRepo';
 import { SupabaseMemberRepo } from '../../core/repos/SupabaseMemberRepo';
 import { SupabaseChoreRepo } from '../../core/repos/SupabaseChoreRepo';
-import type { AuthRepo, HouseholdRepo, MemberRepo, ChoreRepo } from '../../core/repos/interfaces';
+import { SupabaseAreaRepo } from '../../core/repos/SupabaseAreaRepo';
+import type { AuthRepo, HouseholdRepo, MemberRepo, ChoreRepo, AreaRepo } from '../../core/repos/interfaces';
 import { useOfflineEngineContext } from './OfflineEngineProvider';
 
 interface RepoContextValue {
@@ -13,6 +14,7 @@ interface RepoContextValue {
   householdRepo: HouseholdRepo;
   memberRepo: MemberRepo;
   choreRepo: ChoreRepo;
+  areaRepo: AreaRepo;
 }
 
 const RepoContext = createContext<RepoContextValue | null>(null);
@@ -24,9 +26,10 @@ export function RepoProvider({ children }: { children: ReactNode }) {
   const memberRepo = new SupabaseMemberRepo();
   const householdRepo = new SupabaseHouseholdRepo(memberRepo);
   const choreRepo = new SupabaseChoreRepo();
+  const areaRepo = new SupabaseAreaRepo();
 
   return (
-    <RepoContext.Provider value={{ repo, authRepo, householdRepo, memberRepo, choreRepo }}>
+    <RepoContext.Provider value={{ repo, authRepo, householdRepo, memberRepo, choreRepo, areaRepo }}>
       {children}
     </RepoContext.Provider>
   );
@@ -75,5 +78,14 @@ export function useChoreRepo(): ChoreRepo {
     throw new Error('useChoreRepo must be used within RepoProvider');
   }
   return context.choreRepo;
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useAreaRepo(): AreaRepo {
+  const context = useContext(RepoContext);
+  if (!context) {
+    throw new Error('useAreaRepo must be used within RepoProvider');
+  }
+  return context.areaRepo;
 }
 

@@ -89,9 +89,9 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
       frequency: data.frequency,
       active: true,
       rotationMemberIds: data.rotationMemberIds,
-      dueDate: data.dueDate,
       startDate: data.startDate,
-      area: data.area,
+      endDate: data.endDate,
+      areaId: data.areaId,
       createdAt: now,
       updatedAt: now,
     };
@@ -184,8 +184,9 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
       frequency: 'daily', // Default for one-time task
       active: true,
       rotationMemberIds: [data.assignedMemberId],
-      dueDate: data.dueDate,
-      area: data.area,
+      startDate: null,
+      endDate: data.dueDate,
+      areaId: 'other', // Default area key for legacy task creation
       createdAt: now,
       updatedAt: now,
     };
