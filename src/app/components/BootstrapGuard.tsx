@@ -55,18 +55,21 @@ export function BootstrapGuard({ children }: BootstrapGuardProps) {
     lastPathnameRef.current = location.pathname;
   }, [location.pathname, user, userId, queryClient]);
 
+  // Public routes that don't require authentication
+  const publicRoutes = ['/login', '/learn-more', '/about'];
+  const isPublicRoute = publicRoutes.includes(location.pathname);
+
   // Show loading during auth check
   if (authLoading) {
     return <LoadingView />;
   }
 
-  // Redirect to login if no user
+  // Redirect to login if no user (unless on a public route)
   if (!user) {
-    // Only redirect if not already on login page to avoid loops
-    if (location.pathname !== '/login') {
+    if (!isPublicRoute) {
       return <Navigate to="/login" replace />;
     }
-    // If already on login, render children (login page)
+    // If on a public route, render children
     return <>{children}</>;
   }
 
@@ -75,12 +78,12 @@ export function BootstrapGuard({ children }: BootstrapGuardProps) {
     return <LoadingView />;
   }
 
-  // If no member (null or error), redirect to onboarding (unless already there)
+  // If no member (null or error), redirect to onboarding (unless on public route or already there)
   if (!member || memberError) {
-    if (location.pathname !== '/onboarding') {
+    if (!isPublicRoute && location.pathname !== '/onboarding') {
       return <Navigate to="/onboarding" replace />;
     }
-    // If already on onboarding, render children
+    // If on public route or already on onboarding, render children
     return <>{children}</>;
   }
 

@@ -73,7 +73,7 @@ export function LoginPage() {
               {isLoading ? 'Signing in...' : 'Continue with Google'}
             </span>
           </button>
-          <Link to="/about" className={styles.learnMoreLink}>
+          <Link to="/learn-more" className={styles.learnMoreLink}>
             Learn More
           </Link>
         </Card>
