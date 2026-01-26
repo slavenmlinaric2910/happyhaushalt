@@ -78,40 +78,25 @@ export class SupabaseMemberRepo implements MemberRepo {
    * - Therefore we request a return payload and validate that something was actually deleted.
    */
   async leaveCurrentHousehold(): Promise<void> {
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
 
-    if (sessionError) {
-      throw new Error(`Failed to get session: ${sessionError.message}`);
-    }
-
-    if (!session?.user) {
-      throw new Error('User must be authenticated to leave a household');
-    }
-
-    // Try to delete the current user's membership row and return the deleted id(s).
-    // If RLS blocks this or no rows match, we will get an empty array -> we treat that as a failure.
-    const { data: deletedRows, error: deleteError } = await supabase
-      .from('members')
-      .delete()
-      .eq('user_id', session.user.id)
-      .select('id');
-
-    if (deleteError) {
-      throw new Error(`Failed to leave household: ${deleteError.message}`);
-    }
-
-    if (!deletedRows || deletedRows.length === 0) {
-      // This usually means:
-      // - there was no membership row for that user_id, OR
-      // - Row Level Security (RLS) prevented the delete
-      throw new Error(
-        'Failed to leave household: no membership row was deleted (possible RLS policy issue)'
-      );
-    }
+  if (sessionError) {
+    throw new Error(`Failed to get session: ${sessionError.message}`);
   }
+  if (!session?.user) {
+    throw new Error('User must be authenticated to leave a household');
+  }
+
+  // Call the Postgres function (SECURITY DEFINER)
+  const { error } = await supabase.rpc('leave_household');
+
+  if (error) {
+    throw new Error(`Failed to leave household: ${error.message}`);
+  }
+}
 
 
   /**

@@ -276,7 +276,12 @@ export function HouseholdPage() {
         confirmVariant="primary"
         confirmDisabled={leaveHouseholdMutation.isPending}
         onCancel={() => setShowLeaveDialog(false)}
-        onConfirm={() => leaveHouseholdMutation.mutate()}
+        onConfirm={async () => {
+          // Close immediately to prevent double-clicking / repreated mutations
+          setShowLeaveDialog(false);
+          // Run the mutation (await so errors are handled as expected)
+          await leaveHouseholdMutation.mutateAsync();
+        }}
       />
     </div>
   );
