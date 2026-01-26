@@ -252,3 +252,54 @@ Goal: maintain a short, continuous record (weekly) of what was planned and deliv
 - Migrate HomePage/Tasks page queries to offline support (after other team member completes real data implementation)
 - Consider adding UI indicators for offline state
 - Evaluate offline write support (outbox pattern already exists)
+
+---
+
+## Week 4 — Learn More Page & Public Routes (started 2026-01-26)
+
+### Plan
+- Create "Learn More" informational page for new users
+- Wire "Learn More" link from Login page to new route
+- Ensure public routes are accessible without authentication
+- Maintain consistent UI design with existing pages
+
+### Done
+- **Learn More Page**:
+  - Created `LearnMorePage.tsx` and `LearnMorePage.module.css` in `src/features/learn-more/`
+  - Implemented hero section with house illustration, headline, and tagline
+  - Added four informational section cards:
+    - "How it works" (3-step numbered list)
+    - "What you can do" (4 feature bullets with checkmark icons)
+    - "Offline-friendly" (with Wifi icon)
+    - "Privacy" (with Shield icon)
+  - Implemented sticky bottom area with "Continue with Google" button and footer text
+  - Page is fully scrollable with proper spacing for sticky footer
+- **Routing**:
+  - Added `/learn-more` route to `App.tsx` with lazy loading
+  - Updated Login page "Learn More" link to navigate to `/learn-more` instead of `/about`
+- **BootstrapGuard Updates**:
+  - Added public routes support (`/login`, `/learn-more`, `/about`)
+  - Updated authentication check to allow public routes without redirect
+  - Updated member check to allow public routes during onboarding flow
+  - Fixed navigation issue where clicking "Learn More" was redirecting back to login
+
+### Decisions
+- Chose full page route instead of modal for better mobile scrolling experience
+- Used existing Card component and design system for consistency
+- Implemented sticky footer with gradient fade for smooth scrolling UX
+- Used Lucide React icons (Check, Wifi, Shield) for visual consistency
+- Back button navigates explicitly to `/login` (not `navigate(-1)`) for reliability
+- Public routes are accessible to both authenticated and unauthenticated users
+
+### Testing Performed
+- ✅ "Learn More" link navigates correctly from Login page
+- ✅ Back button returns to Login page
+- ✅ Page is accessible without authentication
+- ✅ Page is accessible during onboarding flow
+- ✅ Sticky footer works correctly on scroll
+- ✅ All sections render properly with consistent styling
+
+### Next
+- Consider adding analytics tracking for Learn More page views
+- Evaluate adding more detailed feature explanations if needed
+- Monitor user feedback on page content and layout
