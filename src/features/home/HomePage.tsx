@@ -1,15 +1,19 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
-import { useRepo, useHouseholdRepo, useChoreRepo } from '../../app/providers/RepoProvider';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { useHouseholdRepo, useChoreRepo } from '../../app/providers/RepoProvider';
 import { IconButton } from '../../core/ui/IconButton';
 import { HouseMoodCard } from './HouseMoodCard';
 import styles from './HomePage.module.css';
-import {TaskListSection} from './TaskListSection';
+import { TaskListSection } from './TaskListSection';
 import { Settings } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { SupabaseTaskRepo } from '../../core/repos/SupabaseTaskRepo';
+import { CompletedTasksPage } from '@/features/filter/CompletedTasksPage';
+import { DeletedTasksPage } from '@/features/filter/DeletedTasksPage';
 
 // Dev-Flag anlegen zum Testen
-const IS_DEV_MOCK = true;
+const IS_DEV_MOCK = false;
+
+const taskRepo = new SupabaseTaskRepo();
 
 type TaskLike = {
   id: string;
@@ -17,6 +21,9 @@ type TaskLike = {
   dueDate: string | Date;
   completedAt?: string | Date | null;
 };
+
+type HomeView = 'home' | 'completed' | 'deleted';
+type TaskScope = 'mine' | 'all';
 
 // Hilfsfunktion außerhalb des Components
 function groupTasksByDueDate<T extends TaskLike>(tasks: T[], today: Date) {
@@ -48,11 +55,59 @@ function groupTasksByDueDate<T extends TaskLike>(tasks: T[], today: Date) {
 }
 
 export function HomePage() {
-  const repo = useRepo();
   const householdRepo = useHouseholdRepo();
   const choreRepo = useChoreRepo();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+  const [view, setView] = useState<HomeView>('home');
+  const [scope, setScope] = useState<TaskScope>('mine');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const filterButtonRef = useRef<HTMLButtonElement | null>(null);
+  const filterMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const isCompletedSelected = view === 'completed';
+  const isDeletedSelected = view === 'deleted';
+  const isMineSelected = view === 'home' && scope === 'mine';
+  const isAllSelected = view === 'home' && scope === 'all';
+
+  useEffect(() => {
+    if (!isFilterOpen) return;
+
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+
+      const clickedButton = filterButtonRef.current?.contains(target);
+      const clickedMenu = filterMenuRef.current?.contains(target);
+
+      if (!clickedButton && !clickedMenu) setIsFilterOpen(false);
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFilterOpen(false);
+    };
+
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isFilterOpen]);
+
+  const applyFilter = (key: 'completed' | 'deleted' | 'mine' | 'all') => {
+    if (key === 'completed') setView('completed');
+    if (key === 'deleted') setView('deleted');
+    if (key === 'mine') {
+      setView('home');
+      setScope('mine');
+    }
+    if (key === 'all') {
+      setView('home');
+      setScope('all');
+    }
+    setIsFilterOpen(false);
+  };
 
   const { data: household } = useQuery({
     queryKey: ['household'],
@@ -67,7 +122,7 @@ export function HomePage() {
 
   const tomorrow = useMemo(() => {
     const d = new Date(today);
-    d.setDate(d.getDate() + 1);
+    d.setDate(d.getDate() + 1000000);
     return d;
   }, [today]);
 
@@ -75,43 +130,15 @@ export function HomePage() {
     queryKey: ['tasks', household?.id, today.toISOString()],
     queryFn: async () => {
       if (!household) return [];
-      await repo.regenerateTasksIfNeeded(household.id);
-      return repo.listTasks(household.id, { start: today, end: tomorrow });
+      await taskRepo.regenerateTasksIfNeeded();
+      return taskRepo.listTasks(household.id, { start: today, end: tomorrow });
     },
     enabled: !!household,
   });
 
-  // Entwicklermock: so tun, als gäbe es schon Aufgaben
-  const tasks: TaskLike[] = useMemo(
-    () =>
-      IS_DEV_MOCK
-        ? [
-          {
-            id: 't1',
-            choreTemplateId: 'dishes',
-            dueDate: today, // Due today
-            completedAt: null,
-          },
-          {
-            id: 't2',
-            choreTemplateId: 'vacuum',
-            dueDate: new Date(today.getTime() - 24 * 60 * 60 * 1000), // gestern -> overdue
-            completedAt: null,
-          },
-          {
-            id: 't3',
-            choreTemplateId: 'plants',
-            dueDate: new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000), // in 3 Tagen -> upcoming
-            completedAt: null,
-          },
-        ]
-        : tasksFromQuery,
-    [tasksFromQuery, today],
-  );
-
   const { overdueTasks, todayTasks, upcomingTasks } = useMemo(
-    () => groupTasksByDueDate(tasks, today),
-    [tasks, today],
+    () => groupTasksByDueDate(tasksFromQuery as TaskLike[], today),
+    [tasksFromQuery, today],
   );
 
   const { data: chores = [] } = useQuery({
@@ -139,22 +166,46 @@ export function HomePage() {
   }, [chores]);
 
   const handleCompleteTask = async (taskId: string) => {
-    await repo.completeTask(taskId);
+    await taskRepo.completeTask(taskId);
     await queryClient.invalidateQueries({ queryKey: ['tasks'] });
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    // Falls dein Repo eine deleteTask-Methode hat:
-    // await repo.deleteTask(taskId);
-    // Bis es das gibt, könntest du hier erstmal nur loggen oder einen TODO lassen.
-    console.log('delete task', taskId);
+    await taskRepo.deleteTask(taskId);
     await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    await queryClient.invalidateQueries({ queryKey: ['deletedTasks'] });
   };
 
   const handleEditTask = (taskId: string) => {
-    // Beispiel: auf einen Edit-Screen navigieren
-    navigate(`/tasks/${taskId}/edit`);
+    console.log('edit task', taskId);
   };
+
+  if (view === 'completed') {
+    return (
+      <div className={styles.page}>
+        <header className={styles.header}>
+          <h1 className={styles.title}>Tasks</h1>
+          <button type="button" className={styles.tab} onClick={() => setView('home')}>
+            Back
+          </button>
+        </header>
+
+        <CompletedTasksPage />
+      </div>
+    );
+  } else if (view === 'deleted') {
+    return (
+      <div className={styles.page}>
+        <header className={styles.header}>
+          <h1 className={styles.title}>Tasks</h1>
+          <button type="button" className={styles.tab} onClick={() => setView('home')}>
+            Back
+          </button>
+        </header>
+        <DeletedTasksPage />
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
@@ -168,11 +219,69 @@ export function HomePage() {
         />
       </header>
 
-      <HouseMoodCard status="good" message="All good — nothing overdue." />
+      <HouseMoodCard status="good" message="All good — nothing overdue."/>
 
       <div className={styles.tabs}>
-        <button className={`${styles.tab} ${styles.tabActive}`}>Mine</button>
-        <button className={styles.tab}>All</button>
+        <div className={styles.filterWrap}>
+          <button
+            ref={filterButtonRef}
+            type="button"
+            className={styles.filterButton}
+            onClick={() => setIsFilterOpen((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={isFilterOpen}
+            aria-controls="task-filter-menu"
+          >
+            Filter <span className={styles.filterChevron} aria-hidden="true">▾</span>
+          </button>
+
+          {isFilterOpen && (
+            <div
+              id="task-filter-menu"
+              ref={filterMenuRef}
+              className={styles.filterMenu}
+              role="menu"
+              aria-label="Filter"
+            >
+              <button
+                type="button"
+                className={styles.filterOption}
+                onClick={() => applyFilter('completed')}
+                role="menuitemradio"
+                aria-checked={isCompletedSelected}
+              >
+                Completed
+              </button>
+              <button
+                type="button"
+                className={styles.filterOption}
+                onClick={() => applyFilter('deleted')}
+                role="menuitemradio"
+                aria-checked={isDeletedSelected}
+              >
+                Deleted
+              </button>
+              <button
+                type="button"
+                className={styles.filterOption}
+                onClick={() => applyFilter('mine')}
+                role="menuitemradio"
+                aria-checked={isMineSelected}
+              >
+                Mine
+              </button>
+              <button
+                type="button"
+                className={styles.filterOption}
+                onClick={() => applyFilter('all')}
+                role="menuitemradio"
+                aria-checked={isAllSelected}
+              >
+                All
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <section className={styles.tasksSection}>
@@ -204,8 +313,6 @@ export function HomePage() {
           onEditTask={handleEditTask}
         />
       </section>
-
-
     </div>
   );
 }

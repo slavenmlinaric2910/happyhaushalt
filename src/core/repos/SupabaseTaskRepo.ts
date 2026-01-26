@@ -15,6 +15,8 @@ interface SupabaseTaskRow {
   status: 'open' | 'done' | 'skipped';
   completed_at: string | null;
   completed_by_user_id: string | null;
+  deleted_at: string | null;
+  deleted_by_user_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -33,6 +35,8 @@ function mapTask(row: SupabaseTaskRow): Task {
     status: row.status,
     completedAt: row.completed_at ? new Date(row.completed_at) : null,
     completedByUserId: row.completed_by_user_id,
+    deletedAt: row.deleted_at ? new Date(row.deleted_at) : null,
+    deletedByUserId: row.deleted_by_user_id,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };
@@ -123,6 +127,7 @@ export class SupabaseTaskRepo implements TaskRepo {
       assignedMemberId: row.assigned_user_id,
       status: row.status === 'open' ? 'pending' : 'completed',
       completedAt: row.completed_at ? new Date(row.completed_at) : null,
+      deletedAt: row.deleted_at ? new Date(row.deleted_at) : null,
     }));
   }
 
@@ -150,6 +155,62 @@ export class SupabaseTaskRepo implements TaskRepo {
 
     if (error) {
       throw new Error(`Failed to complete task: ${error.message}`);
+    }
+  }
+
+  /**
+   * Lists deleted tasks by deleted_at range (history view).
+   */
+  async listDeletedTasks(
+    householdId: string,
+    range: { start: Date; end: Date }
+  ): Promise<{ id: string; title: string; dueDate: Date; deletedAt: Date }[]> {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('id, title, due_date, deleted_at')
+      .eq('household_id', householdId)
+      .not('deleted_at', 'is', null)
+      .gte('deleted_at', range.start.toISOString())
+      .lte('deleted_at', range.end.toISOString())
+      .order('deleted_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to list deleted tasks: ${error.message}`);
+    }
+
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      dueDate: new Date(row.due_date),
+      deletedAt: new Date(row.deleted_at),
+    }));
+  }
+
+  /**
+   * Marks a task as deleted.
+   */
+  async deleteTask(taskId: string): Promise<void> {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      throw new Error(`Failed to get session: ${sessionError.message}`);
+    }
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        // NICHT: status: 'deleted'
+        // optional: status: 'skipped',
+        deleted_at: new Date().toISOString(),
+        deleted_by_user_id: session?.user?.id || null,
+      })
+      .eq('id', taskId);
+
+    if (error) {
+      throw new Error(`Failed to delete task: ${error.message}`);
     }
   }
 
