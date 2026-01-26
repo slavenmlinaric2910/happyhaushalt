@@ -1,119 +1,98 @@
-import { useEffect, useState, useRef, ReactNode } from 'react';
+import { useEffect, useRef, ReactNode } from 'react';
 import { useLocation, Navigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../providers/AuthProvider';
 import { useMemberRepo } from '../providers/RepoProvider';
+import { useOfflineQuery } from '../hooks/useOfflineQuery';
+import { db } from '../../core/offline/db';
 import { LoadingView } from './LoadingView';
-import type { Member } from '../../core/types';
 
 interface BootstrapGuardProps {
   children: ReactNode;
 }
 
-type BootstrapState =
-  | { status: 'loading-auth' }
-  | { status: 'loading-member' }
-  | { status: 'no-user' }
-  | { status: 'no-member' }
-  | { status: 'ready'; member: Member };
-
 export function BootstrapGuard({ children }: BootstrapGuardProps) {
   const { loading: authLoading, user } = useAuth();
   const memberRepo = useMemberRepo();
+  const queryClient = useQueryClient();
   const location = useLocation();
-  const [state, setState] = useState<BootstrapState>({ status: 'loading-auth' });
-  const [memberFetched, setMemberFetched] = useState(false);
+  const userId = user?.id || '';
   const lastPathnameRef = useRef<string>(location.pathname);
 
+  // Fetch member via React Query (cached for reuse by other components)
+  const { data: member, isLoading: memberLoading, error: memberError } = useOfflineQuery({
+    queryKey: ['member', userId],
+    queryFn: () => memberRepo.getCurrentMember(),
+    enabled: !!user, // Only fetch when user exists
+    staleTime: 1000 * 60 * 5, // 5 minutes (member doesn't change often)
+    refetchOnWindowFocus: false,
+    readFromDexie: async (key) => {
+      const [, userIdFromKey] = key;
+      if (!userIdFromKey || typeof userIdFromKey !== 'string') {
+        return null;
+      }
+      const member = await db.members.where('userId').equals(userIdFromKey).first();
+      return member || null;
+    },
+    writeToDexie: async (data) => {
+      if (data) {
+        await db.members.put(data);
+      }
+    },
+  });
+
+  // Handle navigation away from onboarding (member might have been created)
   useEffect(() => {
-    // Step 1: Wait for auth to load
-    if (authLoading) {
-      setState({ status: 'loading-auth' });
-      return;
-    }
-
-    // Step 2: If no user, reset member fetch state and redirect to login
-    if (!user) {
-      setMemberFetched(false);
-      setState({ status: 'no-user' });
-      lastPathnameRef.current = location.pathname;
-      return;
-    }
-
-    // Step 3: Fetch member
-    // Re-fetch if:
-    // - Never fetched before, OR
-    // - Navigated away from onboarding (member might have been created)
     const navigatedAwayFromOnboarding =
       lastPathnameRef.current === '/onboarding' &&
       location.pathname !== '/onboarding';
-    const shouldRefetch = !memberFetched || navigatedAwayFromOnboarding;
-
-    if (shouldRefetch) {
-      setState({ status: 'loading-member' });
-      setMemberFetched(true);
-      lastPathnameRef.current = location.pathname;
-
-      memberRepo
-        .getCurrentMember()
-        .then((member) => {
-          if (member) {
-            setState({ status: 'ready', member });
-          } else {
-            setState({ status: 'no-member' });
-          }
-        })
-        .catch((error) => {
-          console.error('Failed to fetch member:', error);
-          // On error, treat as no member to allow onboarding
-          setState({ status: 'no-member' });
-        });
-      return;
+    
+    if (navigatedAwayFromOnboarding && user) {
+      // Invalidate member query to refetch after onboarding completes
+      queryClient.invalidateQueries({ queryKey: ['member', userId] });
     }
-
-    // Update pathname ref even if not refetching
+    
     lastPathnameRef.current = location.pathname;
-  }, [authLoading, user, memberRepo, memberFetched, location.pathname]);
+  }, [location.pathname, user, userId, queryClient]);
+
+  // Public routes that don't require authentication
+  const publicRoutes = ['/login', '/learn-more', '/about'];
+  const isPublicRoute = publicRoutes.includes(location.pathname);
 
   // Show loading during auth check
-  if (state.status === 'loading-auth') {
+  if (authLoading) {
     return <LoadingView />;
   }
 
-  // Redirect to login if no user
-  if (state.status === 'no-user') {
-    // Only redirect if not already on login page to avoid loops
-    if (location.pathname !== '/login') {
+  // Redirect to login if no user (unless on a public route)
+  if (!user) {
+    if (!isPublicRoute) {
       return <Navigate to="/login" replace />;
     }
-    // If already on login, render children (login page)
+    // If on a public route, render children
     return <>{children}</>;
   }
 
   // Show loading while fetching member
-  if (state.status === 'loading-member') {
+  if (memberLoading) {
     return <LoadingView />;
   }
 
-  // If no member, redirect to onboarding (unless already there)
-  if (state.status === 'no-member') {
-    if (location.pathname !== '/onboarding') {
+  // If no member (null or error), redirect to onboarding (unless on public route or already there)
+  if (!member || memberError) {
+    if (!isPublicRoute && location.pathname !== '/onboarding') {
       return <Navigate to="/onboarding" replace />;
     }
-    // If already on onboarding, render children
+    // If on public route or already on onboarding, render children
     return <>{children}</>;
   }
 
   // Member exists - allow app routes
-  if (state.status === 'ready') {
-    // If on login or onboarding page, redirect to home
-    if (location.pathname === '/login' || location.pathname === '/onboarding') {
-      return <Navigate to="/home" replace />;
-    }
-    // Allow all other routes
-    return <>{children}</>;
+  // If on login or onboarding page, redirect to home
+  if (location.pathname === '/login' || location.pathname === '/onboarding') {
+    return <Navigate to="/home" replace />;
   }
-
-  // Fallback (shouldn't reach here)
-  return <LoadingView />;
+  // Allow all other routes
+  return <>{children}</>;
 }
 

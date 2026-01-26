@@ -3,7 +3,9 @@ import { LocalDexieRepo } from '../../core/repos/LocalDexieRepo';
 import { SupabaseAuthRepo } from '../../core/repos/SupabaseAuthRepo';
 import { SupabaseHouseholdRepo } from '../../core/repos/SupabaseHouseholdRepo';
 import { SupabaseMemberRepo } from '../../core/repos/SupabaseMemberRepo';
-import type { AuthRepo, HouseholdRepo, MemberRepo } from '../../core/repos/interfaces';
+import { SupabaseChoreRepo } from '../../core/repos/SupabaseChoreRepo';
+import { SupabaseAreaRepo } from '../../core/repos/SupabaseAreaRepo';
+import type { AuthRepo, HouseholdRepo, MemberRepo, ChoreRepo, AreaRepo } from '../../core/repos/interfaces';
 import { useOfflineEngineContext } from './OfflineEngineProvider';
 
 interface RepoContextValue {
@@ -11,6 +13,8 @@ interface RepoContextValue {
   authRepo: AuthRepo;
   householdRepo: HouseholdRepo;
   memberRepo: MemberRepo;
+  choreRepo: ChoreRepo;
+  areaRepo: AreaRepo;
 }
 
 const RepoContext = createContext<RepoContextValue | null>(null);
@@ -21,9 +25,11 @@ export function RepoProvider({ children }: { children: ReactNode }) {
   const authRepo = new SupabaseAuthRepo();
   const memberRepo = new SupabaseMemberRepo();
   const householdRepo = new SupabaseHouseholdRepo(memberRepo);
+  const choreRepo = new SupabaseChoreRepo();
+  const areaRepo = new SupabaseAreaRepo();
 
   return (
-    <RepoContext.Provider value={{ repo, authRepo, householdRepo, memberRepo }}>
+    <RepoContext.Provider value={{ repo, authRepo, householdRepo, memberRepo, choreRepo, areaRepo }}>
       {children}
     </RepoContext.Provider>
   );
@@ -63,5 +69,23 @@ export function useMemberRepo(): MemberRepo {
     throw new Error('useMemberRepo must be used within RepoProvider');
   }
   return context.memberRepo;
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useChoreRepo(): ChoreRepo {
+  const context = useContext(RepoContext);
+  if (!context) {
+    throw new Error('useChoreRepo must be used within RepoProvider');
+  }
+  return context.choreRepo;
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useAreaRepo(): AreaRepo {
+  const context = useContext(RepoContext);
+  if (!context) {
+    throw new Error('useAreaRepo must be used within RepoProvider');
+  }
+  return context.areaRepo;
 }
 

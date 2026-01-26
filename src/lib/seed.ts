@@ -47,39 +47,46 @@ export async function seedDemoData(): Promise<void> {
   await db.members.bulkAdd(members);
 
   // Create chore templates
+  const now = new Date();
   const chores: ChoreTemplate[] = [
     {
       id: generateId(),
       householdId: household.id,
       name: 'Dishes',
-      area: 'Kitchen',
-      frequencyType: 'daily',
-      frequencyValue: 1,
-      rotationCursor: 0,
-      isArchived: false,
-      checklistItems: ['Load dishwasher', 'Run cycle', 'Unload dishwasher'],
+      frequency: 'daily',
+      active: true,
+      rotationMemberIds: [members[0].id],
+      startDate: null,
+      endDate: null,
+      areaId: 'kitchen', // Seed data uses area keys
+      createdAt: now,
+      updatedAt: now,
     },
     {
       id: generateId(),
       householdId: household.id,
       name: 'Vacuum Living Room',
-      area: 'Living Room',
-      frequencyType: 'weekly',
-      frequencyValue: 1,
-      rotationCursor: 1,
-      isArchived: false,
-      checklistItems: ['Move furniture', 'Vacuum floor', 'Vacuum under cushions'],
+      frequency: 'weekly',
+      active: true,
+      rotationMemberIds: [members[1].id],
+      startDate: null,
+      endDate: null,
+      areaId: 'living_room', // Seed data uses area keys
+      createdAt: now,
+      updatedAt: now,
     },
     {
       id: generateId(),
       householdId: household.id,
       name: 'Bathroom Clean',
-      area: 'Bathroom',
-      frequencyType: 'weekly',
-      frequencyValue: 1,
-      rotationCursor: 2,
-      isArchived: false,
-      checklistItems: ['Clean toilet', 'Clean sink', 'Clean mirror', 'Mop floor'],
+      frequency: 'weekly',
+      active: true,
+      rotationMemberIds: [members[2 % members.length].id],
+      startDate: null,
+      endDate: null,
+      areaId: 'bathroom', // Seed data uses area keys
+      createdAt: now,
+      updatedAt: now,
     },
   ];
 

@@ -1,14 +1,23 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { OfflineEngineProvider } from './providers/OfflineEngineProvider';
 import { RepoProvider } from './providers/RepoProvider';
 import { AuthProvider } from './providers/AuthProvider';
 import { BootstrapGuard } from './components/BootstrapGuard';
 import { AppLayout } from './layout/AppLayout';
-import { HomePage } from '../features/home/HomePage';
-import { HouseholdPage } from '../features/household/HouseholdPage';
-import { OnboardingPage } from '../features/onboarding/OnboardingPage';
-import { LoginPage } from '../features/auth/LoginPage';
+import { CreateTaskPage } from '../features/tasks/CreateTaskPage';
+import { CreateChorePage } from '../features/chores/CreateChorePage';
+import { LoadingView } from './components/LoadingView';
+
+// Lazy load routes for code splitting
+const HomePage = lazy(() => import('../features/home/HomePage').then(module => ({ default: module.HomePage })));
+const HouseholdPage = lazy(() => import('../features/household/HouseholdPage').then(module => ({ default: module.HouseholdPage })));
+const OnboardingPage = lazy(() => import('../features/onboarding/OnboardingPage').then(module => ({ default: module.OnboardingPage })));
+const LoginPage = lazy(() => import('../features/auth/LoginPage').then(module => ({ default: module.LoginPage })));
+const AboutPage = lazy(() => import('../features/auth/AboutPage').then(module => ({ default: module.AboutPage })));
+const LearnMorePage = lazy(() => import('../features/learn-more/LearnMorePage').then(module => ({ default: module.LearnMorePage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,18 +31,24 @@ const queryClient = new QueryClient({
 function AppRoutes() {
   return (
     <BootstrapGuard>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/onboarding" element={<OnboardingPage />} />
-        <Route
-          path="/"
-          element={<AppLayout />}
-        >
-          <Route index element={<Navigate to="/tasks" replace />} />
-          <Route path="tasks" element={<HomePage />} />
-          <Route path="household" element={<HouseholdPage />} />
-        </Route>
-      </Routes>
+      <Suspense fallback={<LoadingView />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/learn-more" element={<LearnMorePage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route
+            path="/"
+            element={<AppLayout />}
+          >
+            <Route index element={<Navigate to="/tasks" replace />} />
+            <Route path="tasks" element={<HomePage />} />
+            <Route path="tasks/create" element={<CreateTaskPage />} />
+            <Route path="chores/create" element={<CreateChorePage />} />
+            <Route path="household" element={<HouseholdPage />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </BootstrapGuard>
   );
 }
@@ -50,7 +65,7 @@ export function App() {
           </AuthProvider>
         </RepoProvider>
       </OfflineEngineProvider>
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );
 }
-

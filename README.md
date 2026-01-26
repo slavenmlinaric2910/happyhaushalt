@@ -16,6 +16,7 @@ A Progressive Web App for managing household chores with offline-first architect
 - **React Router** for routing
 - **@tanstack/react-query** for data fetching/caching
 - **Dexie** (IndexedDB) for offline storage
+- **Supabase Auth** for Google OAuth (session gating)
 - **vite-plugin-pwa** (Workbox) for PWA features
 - **Vitest** + **React Testing Library** for unit tests
 - **Playwright** for E2E tests
@@ -75,7 +76,7 @@ To test offline functionality:
 
 1. **Start the app**: `npm run dev`
 2. **Open DevTools** → Network tab → Enable "Offline" mode (or use airplane mode on mobile)
-3. **Complete a task**: Go to "Today" tab, click a task checkbox
+3. **Complete a task**: Go to the Tasks page, check off a task
 4. **Check the offline banner**: You should see "Offline mode" at the top
 5. **Go back online**: Disable offline mode in DevTools
 6. **Watch sync happen**: The banner should show "Syncing…" then disappear when done
@@ -93,9 +94,8 @@ src/
     offline/         # OfflineEngine, connectivity, Dexie schema
     ui/              # Shared UI primitives
   features/
-    home/            # Home/Areas screen
-    today/           # Today task list
-    chores/          # Chore templates list + detail
+    home/            # Tasks page (integrated view)
+    tasks/           # Create task flow
     household/       # Household/members management
   lib/               # Utilities (dates, ids, logging, seed data)
   assets/            # Static assets
@@ -103,13 +103,20 @@ src/
 
 ## Architecture
 
+### Provider Order (critical)
+
+QueryClientProvider → OfflineEngineProvider → RepoProvider → AuthProvider → BrowserRouter → BootstrapGuard → Routes
+
+This order ensures the offline engine exists before repositories, and that the auth state is ready before routing.
+
 ### Repository Pattern
 
 The app uses a repository pattern to abstract data access:
 
-- **Interfaces**: `HouseholdRepo`, `ChoreRepo`, `TaskRepo`
+- **Interfaces**: `AuthRepo`, `HouseholdRepo`, `MemberRepo`, `TaskRepo`, `ChoreRepo`
 - **LocalDexieRepo**: Offline-first implementation using Dexie
 - **RemoteRepoStub**: Placeholder for future backend integration
+ - **Supabase* repos**: Remote-only repos (auth, household, member)
 
 ### Offline Engine
 
@@ -118,7 +125,7 @@ The `OfflineEngine` manages offline operations:
 - Tracks online/offline status
 - Maintains an outbox queue in IndexedDB
 - Processes operations sequentially when online
-- Provides sync status via `getQueueState()`
+- Provides sync status via UI `OfflineBanner`
 
 ### Data Model
 

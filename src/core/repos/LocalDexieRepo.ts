@@ -1,9 +1,14 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 import { db } from '../offline/db';
 import type {
   Household,
   Member,
   ChoreTemplate,
   TaskInstance,
+  Task,
+  CreateTaskInput,
+  CreateChoreInput,
 } from '../types';
 import { generateId } from '../../lib/utils';
 import type { HouseholdRepo, ChoreRepo, TaskRepo } from './interfaces';
@@ -50,29 +55,45 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
     return db.members.where('householdId').equals(householdId).toArray();
   }
 
+  async getCurrentHouseholdWithMembers(_member?: Member | null): Promise<{ household: Household | null; members: Member[] }> {
+    // LocalDexieRepo doesn't need member parameter, but accepts it for interface compatibility
+    // It can get household directly without needing member.householdId
+    // Parameter prefixed with _ to indicate intentionally unused
+    void _member; // Explicitly mark as used to satisfy linter
+    const household = await this.getCurrentHousehold();
+    if (!household) {
+      return { household: null, members: [] };
+    }
+    const members = await this.listMembers(household.id);
+    return { household, members };
+  }
+
   // ChoreRepo
   async listChores(householdId: string): Promise<ChoreTemplate[]> {
     return db.choreTemplates
       .where('householdId')
       .equals(householdId)
-      .and((chore) => !chore.isArchived)
+      .and((chore) => chore.active)
       .toArray();
   }
 
   async createChore(
-    data: Omit<ChoreTemplate, 'id' | 'householdId' | 'rotationCursor' | 'isArchived'>
+    householdId: string,
+    data: CreateChoreInput
   ): Promise<ChoreTemplate> {
-    const household = await this.getCurrentHousehold();
-    if (!household) {
-      throw new Error('No household found');
-    }
-
+    const now = new Date();
     const chore: ChoreTemplate = {
-      ...data,
       id: generateId(),
-      householdId: household.id,
-      rotationCursor: 0,
-      isArchived: false,
+      householdId,
+      name: data.name,
+      frequency: data.frequency,
+      active: true,
+      rotationMemberIds: data.rotationMemberIds,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      areaId: data.areaId,
+      createdAt: now,
+      updatedAt: now,
     };
 
     await db.choreTemplates.add(chore);
@@ -93,7 +114,7 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
   }
 
   async archiveChore(id: string): Promise<void> {
-    await db.choreTemplates.update(id, { isArchived: true });
+    await db.choreTemplates.update(id, { active: false });
     await this.offlineEngine.enqueue('ARCHIVE_CHORE', { id });
   }
 
@@ -109,6 +130,77 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
       .toArray();
   }
 
+  // TaskRepo interface implementation (Supabase-style)
+  async createTask(input: CreateTaskInput): Promise<Task>;
+  async createTask(data: {
+    name: string;
+    area: string;
+    dueDate: Date;
+    assignedMemberId: string;
+    householdId: string;
+  }): Promise<TaskInstance>;
+  async createTask(
+    _input:
+      | CreateTaskInput
+      | {
+          name: string;
+          area: string;
+          dueDate: Date;
+          assignedMemberId: string;
+          householdId: string;
+        }
+  ): Promise<Task | TaskInstance> {
+    // Local Dexie path is deprecated; direct callers to SupabaseTaskRepo
+    throw new Error('createTask not implemented in LocalDexieRepo. Use SupabaseTaskRepo instead.');
+  }
+
+  // Legacy method - kept for backward compatibility
+  async createManualTask(data: {
+    name: string;
+    area: string;
+    dueDate: Date;
+    assignedMemberId: string;
+    householdId: string;
+  }): Promise<TaskInstance> {
+    // Create a virtual chore template for one-time tasks
+    const choreTemplateId = `manual-${generateId()}`;
+    const now = new Date();
+    
+    const task: TaskInstance = {
+      id: generateId(),
+      householdId: data.householdId,
+      choreTemplateId,
+      dueDate: data.dueDate,
+      assignedMemberId: data.assignedMemberId,
+      status: 'pending',
+      completedAt: null,
+    };
+
+    // Store the task name and area in the chore template for display
+    const choreTemplate: ChoreTemplate = {
+      id: choreTemplateId,
+      householdId: data.householdId,
+      name: data.name,
+      frequency: 'daily', // Default for one-time task
+      active: true,
+      rotationMemberIds: [data.assignedMemberId],
+      startDate: null,
+      endDate: data.dueDate,
+      areaId: 'other', // Default area key for legacy task creation
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await db.choreTemplates.add(choreTemplate);
+    await db.tasks.add(task);
+    await this.offlineEngine.enqueue('CREATE_TASK', {
+      task: task as unknown as Record<string, unknown>,
+      choreTemplate: choreTemplate as unknown as Record<string, unknown>,
+    });
+
+    return task;
+  }
+
   async completeTask(taskId: string): Promise<void> {
     await db.tasks.update(taskId, {
       status: 'completed',
@@ -117,7 +209,8 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
     await this.offlineEngine.enqueue('COMPLETE_TASK', { taskId });
   }
 
-  async regenerateTasksIfNeeded(householdId: string): Promise<void> {
+  async regenerateTasksIfNeeded(householdId?: string): Promise<void> {
+    if (!householdId) return;
     // Simple implementation: check if tasks exist for the next 7 days
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -134,14 +227,20 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
     for (const chore of chores) {
       const tasksForChore = existingTasks.filter((t) => t.choreTemplateId === chore.id);
       if (tasksForChore.length === 0) {
-        // Generate a task for today
-        const assignedMember = members[chore.rotationCursor % members.length];
+        // Generate a task for today using rotationMemberIds
+        const rotationMembers = chore.rotationMemberIds || [];
+        const assignedMemberId = rotationMembers.length > 0 
+          ? rotationMembers[0] 
+          : members[0]?.id;
+        
+        if (!assignedMemberId) continue;
+
         const task: TaskInstance = {
           id: generateId(),
           householdId,
           choreTemplateId: chore.id,
           dueDate: today,
-          assignedMemberId: assignedMember.id,
+          assignedMemberId,
           status: 'pending',
           completedAt: null,
         };

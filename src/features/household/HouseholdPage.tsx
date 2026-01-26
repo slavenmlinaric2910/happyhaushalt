@@ -1,27 +1,31 @@
-import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useMemo, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useHouseholdRepo, useMemberRepo } from '../../app/providers/RepoProvider';
+import { useAuth } from '../../app/providers/AuthProvider';
+import { useOfflineQuery } from '../../app/hooks/useOfflineQuery';
+import { db } from '../../core/offline/db';
+import type { Household, Member } from '../../core/types';
 import { Card } from '../../core/ui/Card';
 import { Button } from '../../core/ui/Button';
 import { Users, Plus, UserPlus, LogOut, Lock, ThumbsUp, ArrowRight } from 'lucide-react';
 import styles from './HouseholdPage.module.css';
 import { ConfirmDialog } from '../../core/ui/ConfirmDialog';
-import { useAuth } from '../../app/providers/AuthProvider';
 
 export function HouseholdPage() {
   const householdRepo = useHouseholdRepo();
   const memberRepo = useMemberRepo();
   const navigate = useNavigate();
-  const [copied, setCopied] = useState(false);
-  const queryClient = useQueryClient();
-  const { signOut } = useAuth();
-  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
 
+  const queryClient = useQueryClient();
+  const { user, signOut } = useAuth();
+  const userId = user?.id || '';
+
+  const [copied, setCopied] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
 
   const leaveHouseholdMutation = useMutation({
     mutationFn: async () => {
-      // Leave the household by removing the current user's member record
       await memberRepo.leaveCurrentHousehold();
     },
     onSuccess: async () => {
@@ -39,62 +43,81 @@ export function HouseholdPage() {
     },
   });
 
-
-  const {
-    data: household,
-    isLoading: householdLoading,
-    error: householdError,
-  } = useQuery({
-    queryKey: ['household'],
-    queryFn: () => householdRepo.getCurrentHousehold(),
-  });
-
-  const {
-    data: members = [],
-    isLoading: membersLoading,
-  } = useQuery({
-    queryKey: ['members', household?.id],
-    queryFn: async () => {
-      if (!household) return [];
-      return memberRepo.listMembersByHousehold(household.id);
+  // Fetch member via offline query (cached)
+  const { data: member } = useOfflineQuery({
+    queryKey: ['member', userId],
+    queryFn: () => memberRepo.getCurrentMember(),
+    staleTime: 1000 * 60 * 5,
+    readFromDexie: async (key) => {
+      const [, userIdFromKey] = key;
+      if (!userIdFromKey || typeof userIdFromKey !== 'string') return null;
+      const m = await db.members.where('userId').equals(userIdFromKey).first();
+      return m || null;
     },
-    enabled: !!household,
+    writeToDexie: async (data) => {
+      if (data) await db.members.put(data);
+    },
   });
+
+  const {
+    data: householdData,
+    isLoading,
+    error: householdError,
+  } = useOfflineQuery<{ household: Household | null; members: Member[] }>({
+    queryKey: ['household-with-members', userId],
+    queryFn: async () => householdRepo.getCurrentHouseholdWithMembers(member),
+    enabled: member !== undefined,
+    refetchOnMount: 'always',
+    staleTime: 1000 * 60,
+    readFromDexie: async () => {
+      const household = await db.households.toCollection().first();
+      if (!household) return { household: null, members: [] };
+      const members = await db.members.where('householdId').equals(household.id).toArray();
+      return { household, members };
+    },
+    writeToDexie: async (data) => {
+      if (data.household) await db.households.put(data.household);
+      if (data.members.length > 0) await db.members.bulkPut(data.members);
+    },
+  });
+
+  const household = householdData?.household;
+  const members = useMemo(() => householdData?.members || [], [householdData?.members]);
 
   const handleCopyCode = async () => {
-    if (household?.joinCode) {
-      try {
-        await navigator.clipboard.writeText(household.joinCode);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (error) {
-        console.error('Failed to copy join code:', error);
-      }
+    if (!household?.joinCode) return;
+    try {
+      await navigator.clipboard.writeText(household.joinCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy join code:', error);
     }
   };
 
   const handleAvatarError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    // Fallback to a default avatar if image fails to load
     const target = e.currentTarget;
-    target.src = '/avatars/broom-buddy.png';
+    if (target.src.endsWith('.webp')) {
+      target.src = target.src.replace('.webp', '.png');
+    } else {
+      target.src = '/avatars/broom-buddy.png';
+    }
   };
 
-  // Find creator's display name
-  const creatorMember = household?.createdBy
-    ? members.find((m) => m.userId === household.createdBy)
-    : null;
-  const creatorName = creatorMember?.displayName || 'Unknown';
+  const creatorName = useMemo(() => {
+    if (!household?.createdBy) return 'Unknown';
+    const creatorMember = members.find((m: Member) => m.userId === household.createdBy);
+    return creatorMember?.displayName || 'Unknown';
+  }, [household?.createdBy, members]);
 
-  // Loading state
-  if (householdLoading || membersLoading) {
+  if (isLoading) {
     return (
       <div className={styles.page}>
         <header className={styles.header}>
           <div>
-            <h1 className={styles.title}>{household?.name}</h1>
-            <div className={styles.skeleton} style={{ width: '150px', height: '16px', marginTop: '0.5rem' }} />
+            <div className={styles.skeleton} style={{ width: '150px', height: '24px', marginBottom: '0.5rem' }} />
+            <div className={styles.skeleton} style={{ width: '200px', height: '16px' }} />
           </div>
-          <div className={styles.skeleton} style={{ width: '64px', height: '64px', borderRadius: '8px' }} />
         </header>
         <Card className={styles.joinCodeCard}>
           <div className={styles.skeleton} style={{ width: '100px', height: '24px', marginBottom: '1rem' }} />
@@ -108,7 +131,10 @@ export function HouseholdPage() {
           <div className={styles.membersGrid}>
             {[1, 2].map((i) => (
               <Card key={i} className={styles.memberCard}>
-                <div className={styles.skeleton} style={{ width: '56px', height: '56px', borderRadius: '12px', margin: '0 auto 0.75rem' }} />
+                <div
+                  className={styles.skeleton}
+                  style={{ width: '56px', height: '56px', borderRadius: '12px', margin: '0 auto 0.75rem' }}
+                />
                 <div className={styles.skeleton} style={{ width: '80px', height: '16px', margin: '0 auto' }} />
               </Card>
             ))}
@@ -118,7 +144,6 @@ export function HouseholdPage() {
     );
   }
 
-  // Error state
   if (householdError) {
     return (
       <div className={styles.page}>
@@ -126,15 +151,12 @@ export function HouseholdPage() {
           <h1 className={styles.title}>Household</h1>
         </header>
         <Card>
-          <p className={styles.errorMessage}>
-            Failed to load household. Please try again later.
-          </p>
+          <p className={styles.errorMessage}>Failed to load household. Please try again later.</p>
         </Card>
       </div>
     );
   }
 
-  // No household state
   if (!household) {
     return (
       <div className={styles.page}>
@@ -142,13 +164,8 @@ export function HouseholdPage() {
           <h1 className={styles.title}>Household</h1>
         </header>
         <Card>
-          <p className={styles.emptyMessage}>
-            No household found. Create one to get started.
-          </p>
-          <Button
-            onClick={() => navigate('/onboarding')}
-            style={{ marginTop: '1rem' }}
-          >
+          <p className={styles.emptyMessage}>No household found. Create one to get started.</p>
+          <Button onClick={() => navigate('/onboarding')} style={{ marginTop: '1rem' }}>
             Go to Onboarding
           </Button>
         </Card>
@@ -156,12 +173,10 @@ export function HouseholdPage() {
     );
   }
 
-  // Split join code into individual characters for display
   const joinCodeChars = household.joinCode.split('');
 
   return (
     <div className={styles.page}>
-      {/* Header with title and metadata */}
       <header className={styles.header}>
         <div className={styles.headerText}>
           <h1 className={styles.title}>{household.name}</h1>
@@ -171,36 +186,49 @@ export function HouseholdPage() {
         </div>
       </header>
 
-      {/* Join Code Section with decorative house illustration */}
       <div className={styles.joinCodeSection}>
-        <img
-          src="/illustrations/house_happy_illustration.png"
-          alt=""
-          className={styles.houseDecoration}
-          aria-hidden="true"
-        />
+        <picture>
+          <source
+            srcSet="/illustrations/house_happy_illustration.webp 1x, /illustrations/house_happy_illustration@2x.webp 2x"
+            type="image/webp"
+          />
+          <img
+            {...({ fetchpriority: 'high' } as React.ImgHTMLAttributes<HTMLImageElement>)}
+            src="/illustrations/house_happy_illustration.webp"
+            alt=""
+            className={styles.houseDecoration}
+            aria-hidden="true"
+            width="380"
+            height="380"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (target.src.endsWith('.webp')) {
+                target.src = '/illustrations/house_happy_illustration.png';
+              }
+            }}
+          />
+        </picture>
+
         <Card className={styles.joinCodeCard}>
-        <div className={styles.joinCodeLabelPill}>
-          <span>Join Code</span>
-        </div>
-        <div className={styles.joinCodeContainer}>
-          <div 
-            className={styles.joinCodeBoxes}
-            onClick={handleCopyCode}
-          >
-            {joinCodeChars.map((char, index) => (
-              <span key={index} className={styles.joinCodeBox}>{char}</span>
-            ))}
+          <div className={styles.joinCodeLabelPill}>
+            <span>Join Code</span>
           </div>
-        </div>
-        <div className={styles.joinCodeInstructions}>
-          <p>Tap code to copy</p>
-          <p>Share this code with others to invite them to your household.</p>
-        </div>
+          <div className={styles.joinCodeContainer}>
+            <div className={styles.joinCodeBoxes} onClick={handleCopyCode}>
+              {joinCodeChars.map((char, index) => (
+                <span key={index} className={styles.joinCodeBox}>
+                  {char}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className={styles.joinCodeInstructions}>
+            <p>Tap code to copy</p>
+            <p>Share this code with others to invite them to your household.</p>
+          </div>
         </Card>
       </div>
 
-      {/* Copied Notification Banner */}
       {copied && (
         <div className={styles.copiedBanner}>
           <ThumbsUp size={18} />
@@ -209,7 +237,6 @@ export function HouseholdPage() {
         </div>
       )}
 
-      {/* Members Section */}
       <section className={styles.membersSection}>
         <div className={styles.membersHeader}>
           <h2 className={styles.membersTitle}>Members</h2>
@@ -218,15 +245,21 @@ export function HouseholdPage() {
             <span>{members.length}</span>
           </div>
         </div>
+
         <div className={styles.membersGrid}>
-          {members.map((member) => {
+          {members.map((member: Member) => {
             const memberIsOwner = member.userId === household.createdBy;
             return (
               <Card key={member.id} className={styles.memberCard}>
                 <img
-                  src={`/avatars/${member.avatarId}.png`}
+                  src={`/avatars/${member.avatarId}.webp`}
+                  srcSet={`/avatars/${member.avatarId}.webp 1x, /avatars/${member.avatarId}@2x.webp 2x`}
+                  sizes="230px"
                   alt={member.displayName}
                   className={styles.memberAvatar}
+                  loading="lazy"
+                  width="230"
+                  height="230"
                   onError={handleAvatarError}
                 />
                 <p className={styles.memberName}>{member.displayName}</p>
@@ -239,7 +272,8 @@ export function HouseholdPage() {
               </Card>
             );
           })}
-          <Card className={styles.inviteCard} onClick={() => {/* TODO: Handle invite */}}>
+
+          <Card className={styles.inviteCard} onClick={() => {/* TODO */}}>
             <div className={styles.inviteIcon}>
               <Plus size={24} />
             </div>
@@ -248,15 +282,12 @@ export function HouseholdPage() {
         </div>
       </section>
 
-      {/* Action Buttons */}
       <div className={styles.actionButtons}>
-        <Button
-          onClick={() => {/* TODO: Handle invite */}}
-          className={styles.inviteButton}
-        >
+        <Button onClick={() => {/* TODO */}} className={styles.inviteButton}>
           <UserPlus size={18} />
           Invite
         </Button>
+
         <Button
           onClick={() => setShowLeaveDialog(true)}
           disabled={leaveHouseholdMutation.isPending}
@@ -267,6 +298,7 @@ export function HouseholdPage() {
           {leaveHouseholdMutation.isPending ? 'Leaving…' : 'Leave'}
         </Button>
       </div>
+
       <ConfirmDialog
         open={showLeaveDialog}
         title="Leave household?"
@@ -277,13 +309,10 @@ export function HouseholdPage() {
         confirmDisabled={leaveHouseholdMutation.isPending}
         onCancel={() => setShowLeaveDialog(false)}
         onConfirm={async () => {
-          // Close immediately to prevent double-clicking / repreated mutations
           setShowLeaveDialog(false);
-          // Run the mutation (await so errors are handled as expected)
           await leaveHouseholdMutation.mutateAsync();
         }}
       />
     </div>
   );
 }
-
