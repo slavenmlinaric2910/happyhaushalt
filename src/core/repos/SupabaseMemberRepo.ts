@@ -67,6 +67,38 @@ export class SupabaseMemberRepo implements MemberRepo {
     return mapMember(memberData);
   }
 
+    /**
+   * Leaves the current household for the authenticated user.
+   *
+   * This removes the "member" record for the current user. After that,
+   * getCurrentMember() will return null and the app will behave as "not in a household".
+   *
+   * Important:
+   * - Supabase/PostgREST can return 204 even when 0 rows were deleted (e.g. RLS or no match).
+   * - Therefore we request a return payload and validate that something was actually deleted.
+   */
+  async leaveCurrentHousehold(): Promise<void> {
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError) {
+    throw new Error(`Failed to get session: ${sessionError.message}`);
+  }
+  if (!session?.user) {
+    throw new Error('User must be authenticated to leave a household');
+  }
+
+  // Call the Postgres function (SECURITY DEFINER)
+  const { error } = await supabase.rpc('leave_household');
+
+  if (error) {
+    throw new Error(`Failed to leave household: ${error.message}`);
+  }
+}
+
+
   /**
    * Lists all members of a household.
    */
