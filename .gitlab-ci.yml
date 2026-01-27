@@ -1,5 +1,8 @@
 image: node:20
 
+default:
+  timeout: 2h
+
 stages:
   - lint
   - typecheck
