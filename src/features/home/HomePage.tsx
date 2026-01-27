@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState, useRef, useEffect } from 'react';
-import { useHouseholdRepo, useChoreRepo } from '../../app/providers/RepoProvider';
+import { useMemo, useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { useHouseholdRepo, useChoreRepo, useMemberRepo } from '../../app/providers/RepoProvider';
 import { IconButton } from '../../core/ui/IconButton';
 import { HouseMoodCard } from './HouseMoodCard';
 import styles from './HomePage.module.css';
@@ -9,9 +9,7 @@ import { Settings } from 'lucide-react';
 import { SupabaseTaskRepo } from '../../core/repos/SupabaseTaskRepo';
 import { CompletedTasksPage } from '@/features/filter/CompletedTasksPage';
 import { DeletedTasksPage } from '@/features/filter/DeletedTasksPage';
-
-// Dev-Flag anlegen zum Testen
-const IS_DEV_MOCK = false;
+import { AVATARS, type AvatarId } from '../onboarding/avatars';
 
 const taskRepo = new SupabaseTaskRepo();
 
@@ -57,6 +55,7 @@ function groupTasksByDueDate<T extends TaskLike>(tasks: T[], today: Date) {
 export function HomePage() {
   const householdRepo = useHouseholdRepo();
   const choreRepo = useChoreRepo();
+  const memberRepo = useMemberRepo();
   const queryClient = useQueryClient();
   const [view, setView] = useState<HomeView>('home');
   const [scope, setScope] = useState<TaskScope>('mine');
@@ -68,6 +67,16 @@ export function HomePage() {
   const isDeletedSelected = view === 'deleted';
   const isMineSelected = view === 'home' && scope === 'mine';
   const isAllSelected = view === 'home' && scope === 'all';
+  const pageRef = useRef<HTMLDivElement | null>(null);
+
+
+  useLayoutEffect(() => {
+    // 1) Falls der Scroll im Container passiert:
+    pageRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+
+    // 2) Falls der Scroll im Window passiert:
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [view, scope]);
 
   useEffect(() => {
     if (!isFilterOpen) return;
@@ -153,13 +162,7 @@ export function HomePage() {
   const choreById = useMemo(() => {
     const map = new Map<string, { name: string; area: string }>();
     for (const c of chores) {
-      map.set(c.id, { name: c.name, area: c.area || 'Other' });
-    }
-
-    if (IS_DEV_MOCK) {
-      map.set('dishes', { name: 'Dishes', area: 'Kitchen' });
-      map.set('vacuum', { name: 'Vacuum', area: 'Living Room' });
-      map.set('plants', { name: 'Water plants', area: 'Balcony' });
+      map.set(c.id, { name: c.name, area: c.areaId ?? '' });
     }
 
     return map;
@@ -168,7 +171,8 @@ export function HomePage() {
   const handleCompleteTask = async (taskId: string) => {
     await taskRepo.completeTask(taskId);
     await queryClient.invalidateQueries({ queryKey: ['tasks'] });
-  };
+    await queryClient.invalidateQueries({ queryKey: ['completedTasks'] });
+    };
 
   const handleDeleteTask = async (taskId: string) => {
     await taskRepo.deleteTask(taskId);
@@ -180,35 +184,71 @@ export function HomePage() {
     console.log('edit task', taskId);
   };
 
+  const { data: members = [] } = useQuery({
+    queryKey: ['members', household?.id],
+    queryFn: async () => {
+      if (!household) return [];
+      return memberRepo.listMembersByHousehold(household.id);
+    },
+    enabled: !!household,
+  });
+
+  const avatarSrcById = useMemo(() => {
+    const map = new Map<AvatarId, string>();
+    for (const a of AVATARS) {
+      map.set(a.id, a.src);
+    }
+    return map;
+  }, []);
+
+  const memberById = useMemo(() => {
+    const map = new Map<string, { id: string; displayName: string; avatarId?: AvatarId }>();
+
+    for (const m of members as any[]) {
+      const memberInfo = {
+        id: String(m.id),
+        displayName: String(m.displayName ?? ''),
+        avatarId: m.avatarId as AvatarId | undefined,
+      };
+
+      // Wichtig: Tasks nutzen assignedMemberId = assigned_user_id (UserId).
+      // Wir mappen deshalb sowohl userId als auch id als Key (robust).
+      if (m.userId) map.set(String(m.userId), memberInfo);
+      map.set(String(m.id), memberInfo);
+    }
+
+    return map;
+  }, [members]);
+
   if (view === 'completed') {
     return (
-      <div className={styles.page}>
-        <header className={styles.header}>
-          <h1 className={styles.title}>Tasks</h1>
-          <button type="button" className={styles.tab} onClick={() => setView('home')}>
-            Back
-          </button>
-        </header>
+      <div className={styles.page} ref={pageRef} key="completed">
+      <header className={styles.header}>
+        <h1 className={styles.title}>Tasks</h1>
+        <button type="button" className={styles.tab} onClick={() => setView('home')}>
+          Back
+        </button>
+      </header>
 
-        <CompletedTasksPage />
-      </div>
-    );
-  } else if (view === 'deleted') {
-    return (
-      <div className={styles.page}>
-        <header className={styles.header}>
-          <h1 className={styles.title}>Tasks</h1>
-          <button type="button" className={styles.tab} onClick={() => setView('home')}>
-            Back
-          </button>
-        </header>
-        <DeletedTasksPage />
-      </div>
-    );
-  }
+      <CompletedTasksPage />
+    </div>
+  );
+} else if (view === 'deleted') {
+  return (
+        <div className={styles.page} ref={pageRef} key="deleted">
+      <header className={styles.header}>
+        <h1 className={styles.title}>Tasks</h1>
+        <button type="button" className={styles.tab} onClick={() => setView('home')}>
+          Back
+        </button>
+      </header>
+      <DeletedTasksPage />
+    </div>
+  );
+}
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} ref={pageRef} key="home">
       <header className={styles.header}>
         <h1 className={styles.title}>Tasks</h1>
         <IconButton
@@ -286,19 +326,12 @@ export function HomePage() {
 
       <section className={styles.tasksSection}>
         <TaskListSection
-          title="Overdue"
-          emptyMessage="No overdue tasks"
-          tasks={overdueTasks}
-          choreById={choreById}
-          onToggleComplete={handleCompleteTask}
-          onDeleteTask={handleDeleteTask}
-          onEditTask={handleEditTask}
-        />
-        <TaskListSection
           title="Due today"
           emptyMessage="No tasks for today"
           tasks={todayTasks}
           choreById={choreById}
+          memberById={memberById}
+          avatarSrcById={avatarSrcById}
           onToggleComplete={handleCompleteTask}
           onDeleteTask={handleDeleteTask}
           onEditTask={handleEditTask}
@@ -308,6 +341,19 @@ export function HomePage() {
           emptyMessage="No upcoming tasks"
           tasks={upcomingTasks}
           choreById={choreById}
+          memberById={memberById}
+          avatarSrcById={avatarSrcById}
+          onToggleComplete={handleCompleteTask}
+          onDeleteTask={handleDeleteTask}
+          onEditTask={handleEditTask}
+        />
+        <TaskListSection
+          title="Overdue"
+          emptyMessage="No overdue tasks"
+          tasks={overdueTasks}
+          choreById={choreById}
+          memberById={memberById}
+          avatarSrcById={avatarSrcById}
           onToggleComplete={handleCompleteTask}
           onDeleteTask={handleDeleteTask}
           onEditTask={handleEditTask}

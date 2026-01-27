@@ -1,67 +1,136 @@
+import styles from './HomePage.module.css';
 import { SwipeableTaskItem } from './SwipeableTaskItem';
-import styles from './TaskListSection.module.css';
+import { AvatarId } from '@/features/onboarding/avatars.ts';
 
-// Falls du TaskLike schon an anderer Stelle definiert hast,
-// kannst du diesen Typ hier weglassen und den bestehenden importieren.
 type TaskLike = {
   id: string;
   choreTemplateId: string;
   dueDate: string | Date;
   completedAt?: string | Date | null;
+  assignedMemberId?: string;
+  title?: string;
+  name?: string;
+};
+
+type ChoreInfo = {
+  name: string;
+  areaId?: string;
+};
+
+type MemberInfo = {
+  id: string;
+  displayName: string;
+  color?: string;
+  avatarId?: AvatarId;
 };
 
 type TaskListSectionProps = {
   title: string;
   emptyMessage: string;
   tasks: TaskLike[];
-  choreById: Map<string, { name: string; area: string }>;
+  choreById: Map<string, ChoreInfo>;
+  memberById?: Map<string, MemberInfo>;
+  avatarSrcById?: Map<AvatarId, string>;
   onToggleComplete: (taskId: string) => void;
-  onDeleteTask: (taskId: string) => void;
   onEditTask: (taskId: string) => void;
+
+  onDeleteTask: (taskId: string) => Promise<void>;
 };
 
-export function TaskListSection({
-                                  title,
-                                  emptyMessage,
-                                  tasks,
-                                  choreById,
-                                  onToggleComplete,
-                                  onDeleteTask,
-                                  onEditTask,
-                                }: TaskListSectionProps) {
-  if (!tasks.length) {
+// einfacher Avatar aus Initialen
+function MemberAvatar({
+                        member,
+                        avatarSrcById,
+                      }: {
+  member?: MemberInfo;
+  avatarSrcById?: Map<AvatarId, string>;
+}) {
+  const label = member?.displayName ?? '?';
+  const src =
+    member?.avatarId && avatarSrcById ? avatarSrcById.get(member.avatarId) : undefined;
+
+  const sizePx = 40;
+
+  if (src) {
     return (
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>{title}</h2>
-        <p className={styles.emptyMessage}>{emptyMessage}</p>
-      </section>
+      <div
+        className={styles.memberAvatar}
+        aria-label={label}
+        style={{ width: sizePx, height: sizePx, flex: '0 0 auto' }}
+      >
+        <img
+          src={src}
+          alt={label}
+          className={styles.memberAvatarCircle}
+          style={{
+            width: sizePx,
+            height: sizePx,
+            borderRadius: 9999,
+            objectFit: 'cover',
+            display: 'block',
+          }}
+        />
+      </div>
     );
   }
 
+  // Fallback (sollte selten sein, falls avatarId fehlt)
+  const initial = label.charAt(0).toUpperCase();
   return (
-    <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>{title}</h2>
-      <div className={styles.list}>
-        {tasks.map((task) => {
-          const chore = choreById.get(task.choreTemplateId);
-          const titleText = chore?.name ?? 'Task';
-          const subtitleText = chore?.area
-            ? `${chore.area} – fällig am ${new Date(task.dueDate).toLocaleDateString()}`
-            : `Fällig am ${new Date(task.dueDate).toLocaleDateString()}`;
+    <div className={styles.memberAvatar} aria-label={label}>
+      <span className={styles.memberAvatarCircle} style={{ backgroundColor: '#fde68a' }}>
+        {initial}
+      </span>
+    </div>
+  );
+}
 
-          return (
-            <SwipeableTaskItem
-              key={task.id}
-              id={task.id}
-              title={titleText}
-              subtitle={subtitleText}
-              onComplete={onToggleComplete}
-              onDelete={onDeleteTask}
-              onEdit={onEditTask}
-            />
-          );
-        })}
-      </div>
-    </section>
+export function TaskListSection({
+  title,
+  emptyMessage,
+  tasks,
+  choreById,
+  memberById,
+  avatarSrcById,
+  onToggleComplete,
+  onDeleteTask,
+  onEditTask,
+}: TaskListSectionProps) {
+  return (
+    <>
+      <h2 className={styles.sectionHeader}>{title}</h2>
+      {tasks.length === 0 ? (
+        <p className={styles.emptyState}>{emptyMessage}</p>
+      ) : (
+        <div className={styles.tasksList}>
+          {tasks.map((task) => {
+            const template = choreById.get(task.choreTemplateId);
+            const userTitle = task.title?.trim();
+            const taskTitle =
+              userTitle && userTitle.length > 0 ? userTitle : (template?.name ?? 'Task');
+
+            const member =
+              task.assignedMemberId && memberById
+                ? memberById.get(task.assignedMemberId)
+                : undefined;
+
+            return (
+              <SwipeableTaskItem
+                key={task.id}
+                id={task.id}
+                title={taskTitle}
+                subtitle={member?.displayName}
+                leftIcon={<MemberAvatar member={member} avatarSrcById={avatarSrcById} />}
+                onComplete={() => onToggleComplete(task.id)}
+                onDelete={() => {
+                  void onDeleteTask(task.id);
+                }}
+                onEdit={() => onEditTask(task.id)}
+              />
+            );
+          })}
+        </div>
+      )}
+    </>
   );
 }

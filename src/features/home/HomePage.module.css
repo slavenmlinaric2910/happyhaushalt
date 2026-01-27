@@ -247,11 +247,13 @@
 
   background: rgba(20, 20, 24, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;              /* <-- das ist die runde Dropdown-Box */
+  border-radius: 14px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
 
   padding: 6px;
   z-index: 50;
+
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .filterOption {
@@ -273,6 +275,6 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
-.filterOption[aria-selected='true'] {
+.filterOption[aria-checked='true'] {
   background: rgba(99, 102, 241, 0.18);
 }

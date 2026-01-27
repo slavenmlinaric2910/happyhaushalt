@@ -12,6 +12,7 @@ interface SupabaseTaskRow {
   title: string;
   due_date: string;
   assigned_user_id: string;
+  area_id: string | null;
   status: 'open' | 'done' | 'skipped';
   completed_at: string | null;
   completed_by_user_id: string | null;
@@ -32,6 +33,7 @@ function mapTask(row: SupabaseTaskRow): Task {
     title: row.title,
     dueDate: new Date(row.due_date),
     assignedUserId: row.assigned_user_id,
+    areaId: row.area_id ?? undefined,
     status: row.status,
     completedAt: row.completed_at ? new Date(row.completed_at) : null,
     completedByUserId: row.completed_by_user_id,
@@ -82,6 +84,7 @@ export class SupabaseTaskRepo implements TaskRepo {
         title: supabaseInput.title,
         due_date: supabaseInput.dueDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
         assigned_user_id: supabaseInput.assignedUserId,
+        area_id: supabaseInput.areaId ?? null,
         status: supabaseInput.status,
       })
       .select()
@@ -110,6 +113,7 @@ export class SupabaseTaskRepo implements TaskRepo {
       .from('tasks')
       .select('*')
       .eq('household_id', householdId)
+      .is('deleted_at', null)
       .gte('due_date', range.start.toISOString().split('T')[0])
       .lte('due_date', range.end.toISOString().split('T')[0])
       .order('due_date', { ascending: true });
@@ -123,6 +127,7 @@ export class SupabaseTaskRepo implements TaskRepo {
       id: row.id,
       householdId: row.household_id,
       choreTemplateId: row.template_id || '',
+      title: row.title,
       dueDate: new Date(row.due_date),
       assignedMemberId: row.assigned_user_id,
       status: row.status === 'open' ? 'pending' : 'completed',
@@ -212,6 +217,40 @@ export class SupabaseTaskRepo implements TaskRepo {
     if (error) {
       throw new Error(`Failed to delete task: ${error.message}`);
     }
+  }
+
+   /**
+    * HARD delete: entfernt alle erledigten Tasks dauerhaft (nicht rückgängig).
+    */
+  async hardDeleteAllCompletedTasks(householdId: string): Promise<number> {
+    const { error, count } = await supabase
+      .from('tasks')
+      .delete({ count: 'exact' })
+      .eq('household_id', householdId)
+      .eq('status', 'done');
+
+    if (error) {
+      throw new Error(`Failed to hard delete completed tasks: ${error.message}`);
+    }
+
+    return count ?? 0;
+  }
+
+   /**
+    * HARD delete: entfernt alle gelöschten Tasks (deleted_at gesetzt) dauerhaft.
+    */
+  async hardDeleteAllDeletedTasks(householdId: string): Promise<number> {
+    const { error, count } = await supabase
+      .from('tasks')
+      .delete({ count: 'exact' })
+      .eq('household_id', householdId)
+      .not('deleted_at', 'is', null);
+
+    if (error) {
+      throw new Error(`Failed to hard delete deleted tasks: ${error.message}`);
+    }
+
+    return count ?? 0;
   }
 
   /**

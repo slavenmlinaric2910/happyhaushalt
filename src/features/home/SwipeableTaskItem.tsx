@@ -5,22 +5,26 @@ export type SwipeableTaskItemProps = {
   id: string;
   title: string;
   subtitle?: string;
+  leftIcon?: React.ReactNode;
   onComplete: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
 };
 
-const SWIPE_THRESHOLD = 80; // px
+const SWIPE_THRESHOLD = 60; // px
+const TAP_SLOP = 8; // px: kleine Bewegungen gelten noch als "Tap"
 
 export function SwipeableTaskItem({
                                     id,
                                     title,
                                     subtitle,
+                                    leftIcon,
                                     onComplete,
                                     onDelete,
                                     onEdit,
                                   }: SwipeableTaskItemProps) {
   const startX = useRef<number | null>(null);
+  const moved = useRef(false);
   const [offsetX, setOffsetX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -28,48 +32,60 @@ export function SwipeableTaskItem({
     // nur linke Maustaste / Touch
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     startX.current = e.clientX;
+    moved.current = false;
     setIsDragging(true);
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }
 
   function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
     if (!isDragging || startX.current == null) return;
+
     const deltaX = e.clientX - startX.current;
-    // leicht begrenzen, damit es „soft“ bleibt
+
+    if (Math.abs(deltaX) > TAP_SLOP) {
+      moved.current = true;
+    }
+
     setOffsetX(Math.max(Math.min(deltaX, 120), -120));
   }
 
   function handlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
     if (!isDragging || startX.current == null) return;
+
     const deltaX = e.clientX - startX.current;
 
     setIsDragging(false);
     startX.current = null;
     setOffsetX(0);
 
-    if (deltaX < SWIPE_THRESHOLD) {
-      onDelete(id); // nach links
-    } else if (deltaX > -SWIPE_THRESHOLD) {
-      onComplete(id); // nach rechts
+    if (deltaX <= -SWIPE_THRESHOLD) {
+      onDelete(id); // Swipe nach links
+      return;
     }
+
+    if (deltaX >= SWIPE_THRESHOLD) {
+      onComplete(id); // Swipe nach rechts
+      return;
+    }
+
+    // sonst: keine Action (Tap wird über onClick behandelt)
   }
 
   function handleClick() {
-    // Nur normales Klicken → Edit
-    if (!isDragging) {
+    // Nur echter Tap/Click (ohne nennenswerte Bewegung) → Edit
+    if (!moved.current) {
       onEdit(id);
     }
   }
 
   return (
     <div className={styles.wrapper}>
-      {/* Hintergrund-Actions */}
       <div className={styles.background}>
-        <div className={styles.deleteBackground}>Löschen</div>
         <div className={styles.completeBackground}>Erledigt</div>
+        <div className={styles.deleteBackground}>Löschen</div>
       </div>
 
-      {/* Vordergrund-Card, die verschoben wird */}
       <div
         className={styles.card}
         style={{ transform: `translateX(${offsetX}px)` }}
@@ -79,12 +95,13 @@ export function SwipeableTaskItem({
         onPointerCancel={handlePointerUp}
         onClick={handleClick}
       >
+        {leftIcon ? <div className={styles.leftIcon}>{leftIcon}</div> : null}
+
         <div className={styles.textContainer}>
           <div className={styles.title}>{title}</div>
           {subtitle && <div className={styles.subtitle}>{subtitle}</div>}
         </div>
 
-        {/* Fallback-Actions für Desktop (optional, aber praktisch) */}
         <div className={styles.actions}>
           <button
             type="button"

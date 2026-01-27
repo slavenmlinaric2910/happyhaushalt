@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Fragment } from 'react';
 import { ListTodo, Users } from 'lucide-react';
@@ -8,8 +8,15 @@ import styles from './AppLayout.module.css';
 
 export function AppLayout() {
   const location = useLocation();
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+  useEffect(() => {
+      scrollRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }, [location.pathname]);
+
 
   const navItems = [
     { path: '/tasks', icon: ListTodo, label: 'Tasks' },
@@ -44,7 +51,7 @@ export function AppLayout() {
         {navItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
-          
+
           // Insert create button between Tasks and Household
           if (index === 1) {
             return (
