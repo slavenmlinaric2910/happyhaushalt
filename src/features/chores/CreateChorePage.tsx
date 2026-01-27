@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import { useHouseholdRepo, useMemberRepo, useAreaRepo } from '../../app/providers/RepoProvider';
 import { SupabaseChoreRepo } from '../../core/repos/SupabaseChoreRepo';
+import { SupabaseTaskRepo } from '../../core/repos/SupabaseTaskRepo';
 import styles from './CreateChorePage.module.css';
 
 const FREQUENCIES = [
@@ -16,6 +17,8 @@ const FREQUENCIES = [
 type FrequencyValue = typeof FREQUENCIES[number]['value'];
 
 const choreRepo = new SupabaseChoreRepo();
+
+const taskRepo = new SupabaseTaskRepo();
 
 export function CreateChorePage() {
   const navigate = useNavigate();
@@ -85,21 +88,45 @@ export function CreateChorePage() {
 
       return choreRepo.createChore(currentHousehold.id, choreInput);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chores'] });
-      navigate('/tasks');
-    },
-  });
+    onSuccess: async (createdChore) => {
+      const currentHousehold = await householdRepo.getCurrentHousehold();
+            if (currentHousehold) {
+              const firstMemberId = selectedAssignees[0];
+              const firstAssigneeUserId =
+                assignees.find((m) => m.id === firstMemberId)?.userId ?? null;
+
+              if (firstAssigneeUserId) {
+                const firstDueDate = startDate ? new Date(startDate) : new Date();
+
+                await taskRepo.createTask({
+                  householdId: currentHousehold.id,
+                  templateId: (createdChore as any).id,
+                  title: name.trim(),
+                  dueDate: firstDueDate,
+                  assignedUserId: firstAssigneeUserId,
+                  areaId: areaId || undefined,
+                  status: 'open',
+                });
+              }
+            }
+
+            // 2) Queries aktualisieren
+            await queryClient.invalidateQueries({ queryKey: ['chores'] });
+            await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+
+            navigate('/tasks');
+          },
+        });
 
   const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
+      e.preventDefault();
 
-    if (!name.trim() || !frequency || !areaId || selectedAssignees.length === 0) {
-      return;
-    }
+      if (!name.trim() || !frequency || !areaId || selectedAssignees.length === 0) {
+        return;
+      }
 
-    createChoreMutation.mutate();
-  };
+      createChoreMutation.mutate();
+    };
 
   const isFormValid = name.trim() && frequency && areaId && selectedAssignees.length > 0;
 

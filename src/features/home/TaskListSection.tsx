@@ -15,6 +15,7 @@ type TaskLike = {
 type ChoreInfo = {
   name: string;
   areaId?: string;
+  frequency?: string;
 };
 
 type MemberInfo = {
@@ -85,6 +86,22 @@ function MemberAvatar({
   );
 }
 
+function formatFrequency(freq?: string) {
+  if (!freq) return '';
+  switch (freq) {
+    case 'daily':
+      return 'Daily';
+    case 'weekly':
+      return 'Weekly';
+    case 'biweekly':
+      return 'Every 2 Weeks';
+    case 'monthly':
+      return 'Monthly';
+    default:
+      return freq;
+  }
+}
+
 export function TaskListSection({
   title,
   emptyMessage,
@@ -114,12 +131,24 @@ export function TaskListSection({
                 ? memberById.get(task.assignedMemberId)
                 : undefined;
 
+            const isChore = Boolean(template);
+            const subtitleBase = member?.displayName?.trim();
+
+            const repeatedText =
+                          isChore && template?.frequency
+                            ? `Repeated ${formatFrequency(template.frequency)}`
+                            : undefined;
+
+            const subtitle = isChore
+                          ? [subtitleBase, 'Chore', repeatedText].filter(Boolean).join(' · ')
+                          : subtitleBase;
+
             return (
               <SwipeableTaskItem
                 key={task.id}
                 id={task.id}
                 title={taskTitle}
-                subtitle={member?.displayName}
+                subtitle={subtitle}
                 leftIcon={<MemberAvatar member={member} avatarSrcById={avatarSrcById} />}
                 onComplete={() => onToggleComplete(task.id)}
                 onDelete={() => {

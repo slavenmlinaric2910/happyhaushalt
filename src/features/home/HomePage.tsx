@@ -160,9 +160,10 @@ export function HomePage() {
   });
 
   const choreById = useMemo(() => {
-    const map = new Map<string, { name: string; area: string }>();
+    const map = new Map<string, { name: string; area: string; frequency?: string }>();
     for (const c of chores) {
-      map.set(c.id, { name: c.name, area: c.areaId ?? '' });
+      map.set(c.id, { name: c.name, area: c.areaId ?? '', frequency: (c as any).frequency?? undefined,
+        });
     }
 
     return map;
