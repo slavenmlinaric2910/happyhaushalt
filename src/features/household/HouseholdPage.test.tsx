@@ -20,7 +20,7 @@ vi.mock('../../app/providers/AuthProvider', async () => {
     useAuth: () => ({
       loading: false,
       session: null,
-      user: null,
+      user: { id: 'user-1' },
       signInWithGoogle: vi.fn(),
       signOut: signOutMock,
     }),
@@ -37,12 +37,33 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+vi.mock('../../core/offline/db', () => ({
+  db: {
+    members: {
+      where: () => ({
+        equals: () => ({
+          first: vi.fn().mockResolvedValue(null),
+          toArray: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+      put: vi.fn().mockResolvedValue(undefined),
+      bulkPut: vi.fn().mockResolvedValue(undefined),
+    },
+    households: {
+      toCollection: () => ({
+        first: vi.fn().mockResolvedValue(null),
+      }),
+      put: vi.fn().mockResolvedValue(undefined),
+    },
+  },
+}));
+
 const mockHouseholdRepo = {
-  getCurrentHousehold: vi.fn(),
+  getCurrentHouseholdWithMembers: vi.fn(),
 };
 
 const mockMemberRepo = {
-  listMembersByHousehold: vi.fn(),
+  getCurrentMember: vi.fn(),
   leaveCurrentHousehold: vi.fn(),
 };
 
@@ -57,9 +78,7 @@ vi.mock('../../app/providers/RepoProvider', () => ({
 function renderWithProviders() {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: {
-        retry: false, // tests should fail fast
-      },
+      queries: { retry: false },
     },
   });
 
@@ -76,34 +95,44 @@ describe('HouseholdPage - Leave button', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-
-    // Mock household + members
-    mockHouseholdRepo.getCurrentHousehold.mockResolvedValue({
-      id: 'household-1',
-      name: 'Test Household',
-      joinCode: 'ABC123',
-      createdBy: 'user-1',
+    mockMemberRepo.getCurrentMember.mockResolvedValue({
+      id: 'member-1',
+      userId: 'user-1',
+      householdId: 'household-1',
+      displayName: 'Owner User',
+      avatarId: 'broom-buddy',
     });
 
-    mockMemberRepo.listMembersByHousehold.mockResolvedValue([
-      {
-        id: 'member-1',
-        userId: 'user-1',
-        displayName: 'Owner User',
-        avatarId: 'broom-buddy',
+    mockHouseholdRepo.getCurrentHouseholdWithMembers.mockResolvedValue({
+      household: {
+        id: 'household-1',
+        name: 'Test Household',
+        joinCode: 'ABC123',
+        createdBy: 'user-1',
       },
-      {
-        id: 'member-2',
-        userId: 'user-2',
-        displayName: 'Second User',
-        avatarId: 'broom-buddy',
-      },
-    ]);
+      members: [
+        {
+          id: 'member-1',
+          userId: 'user-1',
+          householdId: 'household-1',
+          displayName: 'Owner User',
+          avatarId: 'broom-buddy',
+        },
+        {
+          id: 'member-2',
+          userId: 'user-2',
+          householdId: 'household-1',
+          displayName: 'Second User',
+          avatarId: 'broom-buddy',
+        },
+      ],
+    });
 
     mockMemberRepo.leaveCurrentHousehold.mockResolvedValue(undefined);
   });
 
-    it('leaves the household and navigates to login', async () => {
+  it('leaves the household and navigates to login', async () => {
+    const user = userEvent.setup();
     renderWithProviders();
 
     // Wait until the real (non-loading) UI is visible
@@ -111,12 +140,12 @@ describe('HouseholdPage - Leave button', () => {
 
     // Click Leave -> opens dialog
     const leaveButton = await screen.findByRole('button', { name: /leave/i });
-    await userEvent.click(leaveButton);
+    await user.click(leaveButton);
 
     // Confirm inside dialog -> triggers mutation
     const dialog = await screen.findByRole('dialog');
     const confirmLeaveButton = within(dialog).getByRole('button', { name: /^leave$/i });
-    await userEvent.click(confirmLeaveButton);
+    await user.click(confirmLeaveButton);
 
     await waitFor(() => {
       expect(mockMemberRepo.leaveCurrentHousehold).toHaveBeenCalledTimes(1);
