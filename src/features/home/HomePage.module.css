@@ -29,6 +29,7 @@
   background-color: #ece4d9;
   border-radius: 999px;
   padding: 0.15rem;
+  position: relative;
   margin-bottom: 1rem;
 }
 
@@ -200,4 +201,80 @@
 
 .fab {
   /* Additional FAB styling if needed */
+}
+
+.filterWrap {
+  position: relative;
+  display: inline-block;
+}
+
+.filterButton {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  padding: 10px 12px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  cursor: pointer;
+}
+
+.filterButton:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.filterButton:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.55);
+  outline-offset: 2px;
+}
+
+.filterChevron {
+  font-size: 0.9em;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+.filterMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 180px;
+
+  background: rgba(20, 20, 24, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+
+  padding: 6px;
+  z-index: 50;
+
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.filterOption {
+  width: 100%;
+  text-align: left;
+
+  font: inherit;
+  color: inherit;
+  background: transparent;
+
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 10px;
+
+  cursor: pointer;
+}
+
+.filterOption:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.filterOption[aria-checked='true'] {
+  background: rgba(99, 102, 241, 0.18);
 }

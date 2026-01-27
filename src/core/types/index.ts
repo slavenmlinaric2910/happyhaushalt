@@ -52,10 +52,12 @@ export interface TaskInstance {
   id: string;
   householdId: string;
   choreTemplateId: string;
+  title?: string;
   dueDate: Date;
   assignedMemberId: string | null;
   status: 'pending' | 'completed';
   completedAt: Date | null;
+  deletedAt: Date | null;
 }
 
 /**
@@ -73,11 +75,13 @@ export interface Task {
   status: 'open' | 'done' | 'skipped';
   completedAt: Date | null;
   completedByUserId: string | null;
+  deletedAt: Date | null;
+  deletedByUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export type CreateTaskInput = Omit<Task, 'id' | 'completedAt' | 'completedByUserId' | 'createdAt' | 'updatedAt'>;
+export type CreateTaskInput = Omit<Task, 'id' | 'completedAt' | 'completedByUserId' | 'deletedAt' | 'deletedByUserId' |'createdAt' | 'updatedAt'>;
 
 export type OfflineOpType =
   | 'CREATE_TASK'

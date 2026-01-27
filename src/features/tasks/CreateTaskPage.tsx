@@ -76,7 +76,7 @@ export function CreateTaskPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      navigate('/tasks');
+      navigate('/', { state: { taskCreated: true } });
     },
   });
 

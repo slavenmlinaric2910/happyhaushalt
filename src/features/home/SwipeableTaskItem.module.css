@@ -1,0 +1,115 @@
+.actions {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.wrapper {
+  position: relative;
+  margin-bottom: 8px;
+  touch-action: pan-y;
+}
+
+.background {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  pointer-events: none;
+}
+
+.card {
+  position: relative;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 12px 14px;
+  box-shadow: 0 6px 16px rgba(15, 10, 5, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: transform 0.15s ease-out;
+}
+
+/* NEU: linker Slot für Avatar/Icon */
+.leftIcon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  margin-right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* NEU: falls leftIcon ein <img> ist */
+.leftIcon img {
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  object-fit: cover;
+  display: block;
+}
+
+.textContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.completeBackground {
+  flex: 1;
+  background: #d7f3dd; /* sehr softes Grün */
+  display: flex;
+  align-items: center;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #28543a;
+}
+
+.deleteBackground {
+  flex: 1;
+  background: #f8d6da; /* sehr softes Rosa */
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 20px;
+  font-size: 13px;
+  color: #7b2330;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #231f1a;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: #7a7267;
+}
+
+.completeButton,
+.deleteButton {
+  border: none;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 12px;
+  background: transparent;
+  color: #7a7267;
+}
+
+.completeButton:hover {
+  background: #f0f7f2;
+  color: #28543a;
+}
+
+.deleteButton:hover {
+  background: #fbecee;
+  color: #7b2330;
+}

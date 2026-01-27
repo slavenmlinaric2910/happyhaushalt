@@ -16,6 +16,8 @@ interface SupabaseTaskRow {
   status: 'open' | 'done' | 'skipped';
   completed_at: string | null;
   completed_by_user_id: string | null;
+  deleted_at: string | null;
+  deleted_by_user_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -35,6 +37,8 @@ function mapTask(row: SupabaseTaskRow): Task {
     status: row.status,
     completedAt: row.completed_at ? new Date(row.completed_at) : null,
     completedByUserId: row.completed_by_user_id,
+    deletedAt: row.deleted_at ? new Date(row.deleted_at) : null,
+    deletedByUserId: row.deleted_by_user_id,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };
@@ -109,6 +113,7 @@ export class SupabaseTaskRepo implements TaskRepo {
       .from('tasks')
       .select('*')
       .eq('household_id', householdId)
+      .is('deleted_at', null)
       .gte('due_date', range.start.toISOString().split('T')[0])
       .lte('due_date', range.end.toISOString().split('T')[0])
       .order('due_date', { ascending: true });
@@ -122,10 +127,12 @@ export class SupabaseTaskRepo implements TaskRepo {
       id: row.id,
       householdId: row.household_id,
       choreTemplateId: row.template_id || '',
+      title: row.title,
       dueDate: new Date(row.due_date),
       assignedMemberId: row.assigned_user_id,
       status: row.status === 'open' ? 'pending' : 'completed',
       completedAt: row.completed_at ? new Date(row.completed_at) : null,
+      deletedAt: row.deleted_at ? new Date(row.deleted_at) : null,
     }));
   }
 
@@ -154,6 +161,96 @@ export class SupabaseTaskRepo implements TaskRepo {
     if (error) {
       throw new Error(`Failed to complete task: ${error.message}`);
     }
+  }
+
+  /**
+   * Lists deleted tasks by deleted_at range (history view).
+   */
+  async listDeletedTasks(
+    householdId: string,
+    range: { start: Date; end: Date }
+  ): Promise<{ id: string; title: string; dueDate: Date; deletedAt: Date }[]> {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('id, title, due_date, deleted_at')
+      .eq('household_id', householdId)
+      .not('deleted_at', 'is', null)
+      .gte('deleted_at', range.start.toISOString())
+      .lte('deleted_at', range.end.toISOString())
+      .order('deleted_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to list deleted tasks: ${error.message}`);
+    }
+
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      dueDate: new Date(row.due_date),
+      deletedAt: new Date(row.deleted_at),
+    }));
+  }
+
+  /**
+   * Marks a task as deleted.
+   */
+  async deleteTask(taskId: string): Promise<void> {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      throw new Error(`Failed to get session: ${sessionError.message}`);
+    }
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        // NICHT: status: 'deleted'
+        // optional: status: 'skipped',
+        deleted_at: new Date().toISOString(),
+        deleted_by_user_id: session?.user?.id || null,
+      })
+      .eq('id', taskId);
+
+    if (error) {
+      throw new Error(`Failed to delete task: ${error.message}`);
+    }
+  }
+
+   /**
+    * HARD delete: entfernt alle erledigten Tasks dauerhaft (nicht rückgängig).
+    */
+  async hardDeleteAllCompletedTasks(householdId: string): Promise<number> {
+    const { error, count } = await supabase
+      .from('tasks')
+      .delete({ count: 'exact' })
+      .eq('household_id', householdId)
+      .eq('status', 'done');
+
+    if (error) {
+      throw new Error(`Failed to hard delete completed tasks: ${error.message}`);
+    }
+
+    return count ?? 0;
+  }
+
+   /**
+    * HARD delete: entfernt alle gelöschten Tasks (deleted_at gesetzt) dauerhaft.
+    */
+  async hardDeleteAllDeletedTasks(householdId: string): Promise<number> {
+    const { error, count } = await supabase
+      .from('tasks')
+      .delete({ count: 'exact' })
+      .eq('household_id', householdId)
+      .not('deleted_at', 'is', null);
+
+    if (error) {
+      throw new Error(`Failed to hard delete deleted tasks: ${error.message}`);
+    }
+
+    return count ?? 0;
   }
 
   /**
