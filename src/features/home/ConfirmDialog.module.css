@@ -1,0 +1,64 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 18, 16, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.12);
+  padding: 18px 16px;
+}
+
+.title {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f1b16;
+}
+
+.message {
+  margin: 0 0 14px 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: rgba(31, 27, 22, 0.75);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.cancelButton,
+.confirmButton,
+.dangerButton {
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cancelButton {
+  background: #f2efe9;
+  color: #1f1b16;
+}
+
+.confirmButton {
+  background: #e8dfd2;
+  color: #1f1b16;
+}
+
+.dangerButton {
+  background: #f3d6d1;
+  color: #5b1b12;
+}

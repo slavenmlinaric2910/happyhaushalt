@@ -10,6 +10,7 @@ import { SupabaseTaskRepo } from '../../core/repos/SupabaseTaskRepo';
 import { CompletedTasksPage } from '@/features/filter/CompletedTasksPage';
 import { DeletedTasksPage } from '@/features/filter/DeletedTasksPage';
 import { AVATARS, type AvatarId } from '../onboarding/avatars';
+import { ConfirmDialog } from '../../core/ui/ConfirmDialog';
 
 const taskRepo = new SupabaseTaskRepo();
 
@@ -169,17 +170,45 @@ export function HomePage() {
     return map;
   }, [chores]);
 
+  const [confirmState, setConfirmState] = useState<
+      | null
+      | {
+          kind: 'complete' | 'delete';
+          taskId: string;
+        }
+    >(null);
+    const [confirmBusy, setConfirmBusy] = useState(false);
+
   const handleCompleteTask = async (taskId: string) => {
-    await taskRepo.completeTask(taskId);
-    await queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    await queryClient.invalidateQueries({ queryKey: ['completedTasks'] });
+      setConfirmState({ kind: 'complete', taskId });
     };
 
-  const handleDeleteTask = async (taskId: string) => {
-    await taskRepo.deleteTask(taskId);
-    await queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    await queryClient.invalidateQueries({ queryKey: ['deletedTasks'] });
-  };
+    const handleDeleteTask = async (taskId: string) => {
+      setConfirmState({ kind: 'delete', taskId });
+    };
+
+    const runConfirmedAction = async () => {
+      if (!confirmState) return;
+
+      setConfirmBusy(true);
+      try {
+        if (confirmState.kind === 'complete') {
+          await taskRepo.completeTask(confirmState.taskId);
+          await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+          await queryClient.invalidateQueries({ queryKey: ['completedTasks'] });
+        }
+
+        if (confirmState.kind === 'delete') {
+          await taskRepo.deleteTask(confirmState.taskId);
+          await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+          await queryClient.invalidateQueries({ queryKey: ['deletedTasks'] });
+        }
+
+        setConfirmState(null);
+      } finally {
+        setConfirmBusy(false);
+      }
+    };
 
   const handleEditTask = (taskId: string) => {
     console.log('edit task', taskId);
@@ -360,6 +389,32 @@ export function HomePage() {
           onEditTask={handleEditTask}
         />
       </section>
+
+      <ConfirmDialog
+              open={confirmState !== null}
+              title={
+                confirmState?.kind === 'delete'
+                  ? 'Aufgabe löschen?'
+                  : 'Als erledigt markieren?'
+              }
+              message={
+                confirmState?.kind === 'delete'
+                  ? 'Diese Aktion kann später in „Deleted“ eingesehen werden.'
+                  : 'Die Aufgabe wird aus „Due today“ entfernt und erscheint unter „Completed“.'
+              }
+              confirmLabel={confirmState?.kind === 'delete' ? 'Löschen' : 'Erledigt'}
+              cancelLabel="Abbrechen"
+              danger={confirmState?.kind === 'delete'}
+              busy={confirmBusy}
+              onCancel={() => {
+                if (confirmBusy) return;
+                setConfirmState(null);
+              }}
+              onConfirm={() => {
+                void runConfirmedAction();
+              }}
+            />
+
     </div>
   );
 }
