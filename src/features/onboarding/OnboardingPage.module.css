@@ -3,13 +3,43 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.25rem;
+  padding: 1rem;
   background-color: #f6f3ef;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tablet */
+@media (min-width: 640px) {
+  .page {
+    padding: 1.5rem;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .page {
+    padding: 2rem;
+  }
 }
 
 .content {
   width: 100%;
   max-width: 420px;
+}
+
+/* Tablet+ */
+@media (min-width: 640px) {
+  .content {
+    max-width: 480px;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .content {
+    max-width: 520px;
+  }
 }
 
 .title {

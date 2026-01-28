@@ -199,6 +199,31 @@ Goal: maintain a short, continuous record (weekly) of what was planned and deliv
 - Disallowed all crawlers in robots.txt (appropriate for authenticated PWA)
 - Kept ReactQueryDevtools in dev mode only (production bundle optimization)
 
+---
+
+## Week 4 — UI Polish: Tasks Tags + Responsive Layout (started 2026-01-28)
+
+### Plan
+- Improve Tasks tiles to differentiate One-time vs Chore
+- Fix scroll behavior on Household page
+- Add responsive layout tuning for mobile and desktop
+
+### Done
+- Added One-time and Chore tags on task tiles with tab-style badges
+- Matched tag styling to reference (flat bottom, compact sizing, position tweak)
+- Adjusted task card shape to be less rounded at the bottom for a flatter look
+- Improved Household page scrolling (vertical scroll enabled, horizontal scroll suppressed)
+- Added responsive padding/max-width adjustments across layouts for better desktop density
+
+### Decisions
+- Use small, tab-style badges (flat bottom) for task type clarity
+- Keep scroll for members list only; suppress page-level horizontal scroll
+- Use layout-specific responsive rules instead of global .page defaults
+
+### Next
+- Re-verify card rounding and tag alignment on multiple breakpoints
+- Confirm no regressions in scroll behavior on Household page
+
 ### Next
 - Test production build and verify Lighthouse metrics
 - Monitor real-world performance improvements

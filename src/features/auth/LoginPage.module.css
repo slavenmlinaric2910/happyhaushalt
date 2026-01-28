@@ -2,9 +2,27 @@
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  padding: 1.25rem;
+  padding: 1rem;
   padding-top: 2rem;
   background-color: #f6f3ef;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tablet */
+@media (min-width: 640px) {
+  .page {
+    padding: 1.5rem;
+    padding-top: 3rem;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .page {
+    padding: 2rem;
+    padding-top: 4rem;
+  }
 }
 
 .content {
@@ -14,6 +32,20 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
+}
+
+/* Tablet+ */
+@media (min-width: 640px) {
+  .content {
+    max-width: 480px;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .content {
+    max-width: 520px;
+  }
 }
 
 .illustrationWrapper {

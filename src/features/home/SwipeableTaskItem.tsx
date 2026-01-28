@@ -6,6 +6,7 @@ export type SwipeableTaskItemProps = {
   title: string;
   subtitle?: string;
   leftIcon?: React.ReactNode;
+  tag?: { label: string; variant: 'task' | 'chore' };
   onComplete: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
@@ -19,6 +20,7 @@ export function SwipeableTaskItem({
                                     title,
                                     subtitle,
                                     leftIcon,
+                                    tag,
                                     onComplete,
                                     onDelete,
                                     onEdit,
@@ -81,6 +83,11 @@ export function SwipeableTaskItem({
 
   return (
     <div className={styles.wrapper}>
+      {tag && (
+        <span className={`${styles.tag} ${styles[tag.variant]}`}>
+          {tag.label}
+        </span>
+      )}
       <div className={styles.background}>
         <div className={styles.completeBackground}>Erledigt</div>
         <div className={styles.deleteBackground}>Löschen</div>

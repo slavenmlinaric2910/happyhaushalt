@@ -1,14 +1,33 @@
 .page {
-  padding: 1rem 1.25rem;
-  padding-bottom: 1rem;
-  padding-top: 2rem;
-  max-width: 420px;
+  padding: 1rem 1rem;
+  padding-bottom: 6rem;
+  padding-top: 1.5rem;
+  max-width: 100%;
   margin: 0 auto;
-   /* important */
-   height: 100dvh;         /* better than 100vh on mobile */
-   overflow: hidden;       /* kill vertical scroll */
-   overscroll-behavior: none;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
   box-sizing: border-box;
+}
+
+/* Tablet */
+@media (min-width: 640px) {
+  .page {
+    padding: 1.5rem 2rem;
+    padding-bottom: 6rem;
+    padding-top: 2rem;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .page {
+    padding: 2rem 2.5rem;
+    padding-bottom: 6rem;
+    padding-top: 2.5rem;
+  }
 }
 
 /* Header Section */

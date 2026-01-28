@@ -1,11 +1,27 @@
 .page {
-  padding: 1.25rem 1.25rem;
+  padding: 1rem 1rem;
   padding-bottom: 2rem;
-  max-width: 420px;
+  max-width: 100%;
   margin: 0 auto;
-
   min-height: 100vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tablet */
+@media (min-width: 640px) {
+  .page {
+    padding: 1.5rem 2rem;
+    padding-bottom: 2.5rem;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .page {
+    padding: 2rem 2.5rem;
+    padding-bottom: 3rem;
+  }
 }
 
 .header {

@@ -150,6 +150,7 @@ export function TaskListSection({
                 title={taskTitle}
                 subtitle={subtitle}
                 leftIcon={<MemberAvatar member={member} avatarSrcById={avatarSrcById} />}
+                tag={isChore ? { label: 'Chore', variant: 'chore' } : { label: 'One-time', variant: 'task' }}
                 onComplete={() => onToggleComplete(task.id)}
                 onDelete={() => {
                   void onDeleteTask(task.id);
