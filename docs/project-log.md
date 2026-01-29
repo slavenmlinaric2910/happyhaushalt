@@ -43,7 +43,7 @@ Goal: maintain a short, continuous record (weekly) of what was planned and deliv
 
 ---
 
-## Week 2 — Navbar Redesign & Cleanup (started 18.01.2026)
+## Week 2 — Navbar Redesign & Cleanup (started 14.01.2026)
 
 ### Plan
 - Redesign navbar to show only core navigation: Tasks, Household, + (Create Task button)
@@ -73,9 +73,49 @@ Goal: maintain a short, continuous record (weekly) of what was planned and deliv
 - Kept all original HomePage components (HouseMoodCard, AreaTiles) intact
 
 ### Next
-- Implement Create Task modal (add new chore/task from + button)
+- Implement Create Task and Create Chore pages
 - Design and implement ChoreTemplates management page
 - Add task filtering/sorting on Tasks page if needed
+
+---
+
+## Week 2 (continued) — Task & Chore Creation (started 18.01.2026)
+
+### Plan
+- Implement CreateTaskPage for one-time task creation
+- Implement CreateChorePage for recurring chore templates
+- Set up database schema for tasks and chore_templates
+- Connect forms to Supabase repositories
+
+### Done
+- **Task Creation (CreateTaskPage)**:
+  - Form with fields: Name, Due Date, Area, Assignee
+  - All fields required with validation
+  - Fetches household members for assignee dropdown
+  - Creates task via `SupabaseTaskRepo.createTask()`
+  - Redirects to tasks page on success
+- **Chore Creation (CreateChorePage)**:
+  - Form with fields: Name, Frequency, Start Date, End Date, Area, Assignees
+  - Frequency options: Daily, Weekly, Every 2 Weeks, Monthly
+  - Multi-select for assignees (rotation members)
+  - Creates chore template via `SupabaseChoreRepo.createChore()`
+  - Redirects to tasks page on success
+- **Database Schema**:
+  - `tasks` table: id, household_id, template_id, title, due_date, assigned_user_id, area_id, status, completed_at, completed_by_user_id
+  - `chore_templates` table: id, household_id, name, frequency, active, rotation_member_ids, start_date, end_date, area_id
+- **Repository Implementation**:
+  - `SupabaseTaskRepo`: createTask(), listTasks(), completeTask()
+  - `SupabaseChoreRepo`: createChore(), listChores(), updateChore(), archiveChore()
+
+### Decisions
+- Tasks are one-time items with a single assignee
+- Chores are recurring templates with rotation members
+- Area selection uses hardcoded list (to be refactored to database)
+- Start Date and End Date are optional for chores
+
+### Next
+- Refactor Area selection to use database table
+- Add task completion flow with status updates
 - Expand testing coverage for task completion flow
 
 ---
@@ -199,31 +239,6 @@ Goal: maintain a short, continuous record (weekly) of what was planned and deliv
 - Disallowed all crawlers in robots.txt (appropriate for authenticated PWA)
 - Kept ReactQueryDevtools in dev mode only (production bundle optimization)
 
----
-
-## Week 4 — UI Polish: Tasks Tags + Responsive Layout (started 2026-01-28)
-
-### Plan
-- Improve Tasks tiles to differentiate One-time vs Chore
-- Fix scroll behavior on Household page
-- Add responsive layout tuning for mobile and desktop
-
-### Done
-- Added One-time and Chore tags on task tiles with tab-style badges
-- Matched tag styling to reference (flat bottom, compact sizing, position tweak)
-- Adjusted task card shape to be less rounded at the bottom for a flatter look
-- Improved Household page scrolling (vertical scroll enabled, horizontal scroll suppressed)
-- Added responsive padding/max-width adjustments across layouts for better desktop density
-
-### Decisions
-- Use small, tab-style badges (flat bottom) for task type clarity
-- Keep scroll for members list only; suppress page-level horizontal scroll
-- Use layout-specific responsive rules instead of global .page defaults
-
-### Next
-- Re-verify card rounding and tag alignment on multiple breakpoints
-- Confirm no regressions in scroll behavior on Household page
-
 ### Next
 - Test production build and verify Lighthouse metrics
 - Monitor real-world performance improvements
@@ -280,6 +295,88 @@ Goal: maintain a short, continuous record (weekly) of what was planned and deliv
 
 ---
 
+## Week 3 (continued) — Area Management Refactoring (2026-01-24)
+
+### Plan
+- Move hardcoded Areas to database table
+- Create AreaRepo for fetching areas from Supabase
+- Update Task and Chore creation to use dynamic areas
+- Rename `dueDate` to `endDate` and add `startDate` for Chores
+- Make `areaId` a required field
+
+### Done
+- **New Area Type & Repository**:
+  - Created `Area` type with `id`, `key`, and `name` fields
+  - Created `AreaRepo` interface with `listAreas()` method
+  - Implemented `SupabaseAreaRepo` that fetches from `public.areas` table
+  - Query: `SELECT id, key, name FROM areas WHERE is_active = true ORDER BY sort_order`
+  - Added `useAreaRepo()` hook in RepoProvider
+- **Updated ChoreTemplate Schema**:
+  - Renamed `dueDate` → `endDate` (optional end date for the chore)
+  - Added `startDate` field (optional start date)
+  - Changed `areaId` from optional to **required**
+- **Updated CreateChoreInput Schema**:
+  - Same changes: `startDate`, `endDate`, required `areaId`
+- **Updated Task Schema**:
+  - Added optional `areaId` field to `Task` type
+  - Updated `SupabaseTaskRepo` to handle `area_id` column
+- **Updated SupabaseChoreRepo**:
+  - `ChoreTemplateRow` now uses `start_date` and `end_date` columns
+  - `area_id` is now required (not nullable)
+  - `createChore()` and `updateChore()` properly map date fields
+- **Updated CreateTaskPage**:
+  - Removed hardcoded `AREAS` array
+  - Fetches areas dynamically via `useAreaRepo().listAreas()`
+  - Shows loading state while fetching areas
+  - Saves `areaId` to database on task creation
+- **Updated CreateChorePage**:
+  - Removed hardcoded `AREAS` array
+  - Fetches areas dynamically via `useAreaRepo().listAreas()`
+  - Maps `startDate` and `endDate` (renamed from `dueDate`)
+  - Area is now a required field in form validation
+- **Updated LocalDexieRepo**:
+  - `createChore()` uses `startDate`/`endDate`
+  - Legacy `createTask()` uses `areaId: 'other'` as default
+- **Updated Seed Data**:
+  - Uses area keys (`kitchen`, `living_room`, `bathroom`) instead of display names
+  - Uses `startDate`/`endDate` fields
+
+### Database Schema (areas table)
+```sql
+CREATE TABLE public.areas (
+  id UUID PRIMARY KEY,
+  key TEXT NOT NULL,
+  name TEXT NOT NULL,
+  sort_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true
+);
+
+-- Initial data includes:
+-- whole_household, kitchen, living_room, bathroom, bedroom,
+-- balcony, office, hallway, garage, garden, other
+```
+
+### Decisions
+- Areas are stored in database for future extensibility (custom areas per household)
+- `areaId` stores the UUID reference to `areas.id`
+- `key` field enables seed data to reference areas by readable identifier
+- Made `areaId` required to ensure data consistency
+- Legacy task creation defaults to `'other'` area key
+
+### Testing Performed
+- ✅ TypeScript compilation passes
+- ✅ ESLint passes with 0 warnings
+- ✅ Areas dropdown loads from database
+- ✅ Chore creation saves `start_date`, `end_date`, `area_id`
+- ✅ Task creation saves `area_id`
+
+### Next
+- Display area names on task/chore lists (requires area lookup)
+- Consider caching areas (rarely change, good candidate for staleTime)
+- Add area management UI (admin feature for custom areas)
+
+---
+
 ## Week 4 — Learn More Page & Public Routes (started 2026-01-26)
 
 ### Plan
@@ -328,3 +425,30 @@ Goal: maintain a short, continuous record (weekly) of what was planned and deliv
 - Consider adding analytics tracking for Learn More page views
 - Evaluate adding more detailed feature explanations if needed
 - Monitor user feedback on page content and layout
+
+---
+
+## Week 4 (continued) — UI Polish: Tasks Tags + Responsive Layout (started 2026-01-28)
+
+### Plan
+- Improve Tasks tiles to differentiate One-time vs Chore
+- Fix scroll behavior on Household page
+- Add responsive layout tuning for mobile and desktop
+
+### Done
+- Added One-time and Chore tags on task tiles with tab-style badges
+- Matched tag styling to reference (flat bottom, compact sizing, position tweak)
+- Adjusted task card shape to be less rounded at the bottom for a flatter look
+- Improved Household page scrolling (vertical scroll enabled, horizontal scroll suppressed)
+- Added responsive padding/max-width adjustments across layouts for better desktop density
+
+### Decisions
+- Use small, tab-style badges (flat bottom) for task type clarity
+- Keep scroll for members list only; suppress page-level horizontal scroll
+- Use layout-specific responsive rules instead of global .page defaults
+
+### Next
+- Re-verify card rounding and tag alignment on multiple breakpoints
+- Confirm no regressions in scroll behavior on Household page
+
+---
