@@ -397,15 +397,15 @@ export function HomePage() {
                   ? 'Aufgabe löschen?'
                   : 'Als erledigt markieren?'
               }
-              message={
+              description={
                 confirmState?.kind === 'delete'
-                  ? 'Diese Aktion kann später in „Deleted“ eingesehen werden.'
-                  : 'Die Aufgabe wird aus „Due today“ entfernt und erscheint unter „Completed“.'
+                  ? 'Diese Aktion kann später in „Deleted" eingesehen werden.'
+                  : 'Die Aufgabe wird aus „Due today" entfernt und erscheint unter „Completed".'
               }
               confirmLabel={confirmState?.kind === 'delete' ? 'Löschen' : 'Erledigt'}
               cancelLabel="Abbrechen"
-              danger={confirmState?.kind === 'delete'}
-              busy={confirmBusy}
+              confirmVariant={confirmState?.kind === 'delete' ? 'secondary' : 'primary'}
+              confirmDisabled={confirmBusy}
               onCancel={() => {
                 if (confirmBusy) return;
                 setConfirmState(null);

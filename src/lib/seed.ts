@@ -104,6 +104,7 @@ export async function seedDemoData(): Promise<void> {
     assignedMemberId: members[index % members.length].id,
     status: 'pending',
     completedAt: null,
+    deletedAt: null,
   }));
 
   await db.tasks.bulkAdd(tasks);
