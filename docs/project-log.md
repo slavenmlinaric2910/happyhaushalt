@@ -303,3 +303,68 @@ Goal: maintain a short, continuous record (weekly) of what was planned and deliv
 - Consider adding analytics tracking for Learn More page views
 - Evaluate adding more detailed feature explanations if needed
 - Monitor user feedback on page content and layout
+
+## Week 5 — Tasks Page Logic & Interaction Improvements (started 2026-01-27)
+
+### Plan
+- Implement full interaction logic for Tasks page based on existing UI
+- Enable gesture-based task management (done / delete)
+- Ensure all relevant task types are visible in the task overview
+- Improve UX safety for destructive actions
+
+### Done
+- **Tasks Page UI Implementation (Ticket 1)**
+  - Implemented the Tasks/Home page layout according to the provided design
+  - Created the visual structure for the task overview without business logic
+  - Prepared components for later integration of task interaction and filtering
+
+- **Swipe-Based Task Management (Ticket 2)**
+  - Implemented swipe gestures on tasks:
+    - Swipe right → mark task as *Done*
+    - Swipe left → *Delete* task
+  - Added task filters:
+    - **Completed**: shows finished tasks
+    - **Deleted**: shows removed tasks
+  - Introduced soft-delete behavior:
+    - Completed or deleted tasks remain visible in filtered views
+    - Added trash icon to allow **hard delete** of tasks
+
+- **Chores Visibility Fix (Ticket 3)**
+  - Fixed issue where **Chores were not shown** in the task overview
+  - Ensured the Tasks page now displays **all relevant task types**, including chores
+  - Corrected loading/filtering logic so users get a complete overview of their responsibilities
+
+- **Confirmation Modal for Critical Actions (Ticket 4)**
+  - Added confirmation modal before:
+    - Deleting a task
+    - Marking a task as completed
+  - Prevents accidental actions caused by unintended swipe gestures
+  - Improves overall UX safety and usability on mobile devices
+
+### Decisions
+- Swipe gestures are kept for fast task handling, but guarded by confirmation dialogs
+- Soft delete is preferred over immediate removal to allow recovery and transparency
+- Tasks and Chores are treated uniformly in the overview to avoid fragmented UX
+
+### Open Questions / Blockers
+- **Chores with Frequency (Conceptual Design Pending)**
+  - One-time tasks are straightforward: once completed, they disappear from active views
+  - Recurring chores (e.g. daily for one year) raise open questions:
+    - How should they appear in the task overview sections:
+      - *Today*
+      - *Upcoming*
+      - *Overdue*
+    - What happens when a recurring chore is marked as completed?
+      - Create next occurrence automatically?
+      - Reset status for the next due date?
+  - Requires a clear conceptual model before implementation
+
+### Next
+- Implement **“Mine / All” task filter**:
+  - *Mine*: shows tasks where the current user is responsible
+  - *All*: shows tasks assigned to all household members
+- Define and implement a **recurring chore handling concept**:
+  - Data model for frequency-based tasks
+  - Rules for task regeneration and visibility
+  - UX behavior after completing a recurring chore
+- Align recurring chore logic with existing task filters and sections
