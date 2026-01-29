@@ -174,6 +174,7 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
       assignedMemberId: data.assignedMemberId,
       status: 'pending',
       completedAt: null,
+      deletedAt: null,
     };
 
     // Store the task name and area in the chore template for display
@@ -243,6 +244,7 @@ export class LocalDexieRepo implements HouseholdRepo, ChoreRepo, TaskRepo {
           assignedMemberId,
           status: 'pending',
           completedAt: null,
+          deletedAt: null,
         };
         await db.tasks.add(task);
       }
