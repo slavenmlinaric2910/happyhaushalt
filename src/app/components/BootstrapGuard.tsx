@@ -90,7 +90,7 @@ export function BootstrapGuard({ children }: BootstrapGuardProps) {
   // Member exists - allow app routes
   // If on login or onboarding page, redirect to home
   if (location.pathname === '/login' || location.pathname === '/onboarding') {
-    return <Navigate to="/home" replace />;
+    return <Navigate to="/tasks" replace />;
   }
   // Allow all other routes
   return <>{children}</>;
