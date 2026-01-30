@@ -53,8 +53,8 @@ export function CompletedTasksPage() {
       const allInRange = await taskRepo.listTasks(household.id, { start, end });
 
       return allInRange
-        .filter((t: any) => t.status === 'done' || !!t.completedAt)
-        .map((t: any) => ({
+        .filter((t) => t.status === 'completed' || !!t.completedAt)
+        .map((t) => ({
           id: String(t.id),
           title: typeof t.title === 'string' ? t.title : 'Task',
           dueDate: t.dueDate,

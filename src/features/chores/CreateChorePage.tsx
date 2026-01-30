@@ -100,7 +100,7 @@ export function CreateChorePage() {
 
                 await taskRepo.createTask({
                   householdId: currentHousehold.id,
-                  templateId: (createdChore as any).id,
+                  templateId: createdChore.id,
                   title: name.trim(),
                   dueDate: firstDueDate,
                   assignedUserId: firstAssigneeUserId,

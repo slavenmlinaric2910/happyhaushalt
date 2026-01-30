@@ -183,7 +183,7 @@ export class SupabaseTaskRepo implements TaskRepo {
       throw new Error(`Failed to list deleted tasks: ${error.message}`);
     }
 
-    return (data || []).map((row: any) => ({
+    return (data || []).map((row: { id: string; title: string; due_date: string; deleted_at: string }) => ({
       id: row.id,
       title: row.title,
       dueDate: new Date(row.due_date),

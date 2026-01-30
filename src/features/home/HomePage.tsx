@@ -163,7 +163,7 @@ export function HomePage() {
   const choreById = useMemo(() => {
     const map = new Map<string, { name: string; area: string; frequency?: string }>();
     for (const c of chores) {
-      map.set(c.id, { name: c.name, area: c.areaId ?? '', frequency: (c as any).frequency?? undefined,
+      map.set(c.id, { name: c.name, area: c.areaId ?? '', frequency: c.frequency ?? undefined,
         });
     }
 
@@ -234,7 +234,7 @@ export function HomePage() {
   const memberById = useMemo(() => {
     const map = new Map<string, { id: string; displayName: string; avatarId?: AvatarId }>();
 
-    for (const m of members as any[]) {
+    for (const m of members) {
       const memberInfo = {
         id: String(m.id),
         displayName: String(m.displayName ?? ''),
