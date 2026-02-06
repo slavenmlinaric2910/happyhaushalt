@@ -11,6 +11,7 @@ import { Button } from '../../core/ui/Button';
 import { Users, Plus, UserPlus, LogOut, Lock, ThumbsUp, ArrowRight } from 'lucide-react';
 import styles from './HouseholdPage.module.css';
 import { ConfirmDialog } from '../../core/ui/ConfirmDialog';
+import { InviteModal } from './InviteModal';
 
 export function HouseholdPage() {
   const householdRepo = useHouseholdRepo();
@@ -23,6 +24,7 @@ export function HouseholdPage() {
 
   const [copied, setCopied] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const leaveHouseholdMutation = useMutation({
     mutationFn: async () => {
@@ -273,7 +275,7 @@ export function HouseholdPage() {
             );
           })}
 
-          <Card className={styles.inviteCard} onClick={() => {/* TODO */}}>
+          <Card className={styles.inviteCard} onClick={() => setShowInviteModal(true)}>
             <div className={styles.inviteIcon}>
               <Plus size={24} />
             </div>
@@ -283,7 +285,7 @@ export function HouseholdPage() {
       </section>
 
       <div className={styles.actionButtons}>
-        <Button onClick={() => {/* TODO */}} className={styles.inviteButton}>
+        <Button onClick={() => setShowInviteModal(true)} className={styles.inviteButton}>
           <UserPlus size={18} />
           Invite
         </Button>
@@ -312,6 +314,12 @@ export function HouseholdPage() {
           setShowLeaveDialog(false);
           await leaveHouseholdMutation.mutateAsync();
         }}
+      />
+
+      <InviteModal
+        isOpen={showInviteModal}
+        joinCode={household.joinCode}
+        onClose={() => setShowInviteModal(false)}
       />
     </div>
   );
