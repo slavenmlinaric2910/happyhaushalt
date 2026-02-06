@@ -289,7 +289,11 @@ export function HomePage() {
         />
       </header>
 
-      <HouseMoodCard status="good" message="All good — nothing overdue."/>
+      <HouseMoodCard 
+        status={overdueTasks.length > 0 ? 'needs-attention' : 'good'} 
+        dueToday={todayTasks.length} 
+        overdue={overdueTasks.length}
+      />
 
       <div className={styles.tabs}>
         <div className={styles.filterWrap}>
