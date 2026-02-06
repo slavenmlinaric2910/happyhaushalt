@@ -1,0 +1,117 @@
+@startuml HappyHaushalt_Activity_Simple
+
+!theme plain
+skinparam backgroundColor #F6F3EF
+skinparam activityBackgroundColor #FFFFFF
+skinparam activityBorderColor #8B7355
+skinparam activityBarColor #8B7355
+skinparam arrowColor #8B7355
+
+title HappyHaushalt - Hauptaktivitäten
+
+start
+
+partition "Authentifizierung & Onboarding" {
+  :Anmelden mit Google OAuth;
+  
+  if (Mitglied existiert?) then (ja)
+    :Direkt zu App;
+  else (nein)
+    :Profil einrichten\n(Name + Avatar);
+    
+    if (Haushalt wählen) then (Neu erstellen)
+      :Haushalt erstellen;
+      :Neuen Haushalt-/\nJoin-Code erhalten;
+    else (Beitreten)
+      :Join-Code eingeben;
+      :Haushalt beitreten;
+    endif
+    
+    :Mitglied anlegen;
+  endif
+}
+
+partition "Daten laden" {
+  fork
+    :Tasks aus DB laden;
+    :Lokal speichern (Dexie);
+  fork again
+    :Chores aus DB laden;
+    :Lokal speichern (Dexie);
+  fork again
+    :Areas aus DB laden;
+    :Lokal speichern (Dexie);
+  end fork
+}
+
+partition "Hauptaktivitäten" {
+  repeat
+    :Benutzeraktion;
+    
+    split
+      :**Task erstellen**;
+      :Eingabe: Titel, Area, \nAssignee, Abschluss-Datum;
+    split again
+      :**Chore erstellen**;
+      :Eingabe: Name, Frequenz, Area, \nAssignee, Anfangs-/End-Datum;
+    split again
+      :**Task/Chore abschließen**;
+      :Status auf 'completed'\noder 'deleted' setzen;
+    split again
+      :**Haushalt verwalten**;
+      :Mitglieder anzeigen,\nJoin-Code teilen\nHaushalt verlassen;
+      if (Haushalt verlassen gewählt?) then (ja)
+        :Abmelden;
+        stop
+      else (nein)
+      endif
+    end split
+    
+    :Operation lokal\nspeichern (Dexie);
+    
+    :Operation in Queue\n(OfflineOp);
+    
+    if (Online?) then (ja)
+      :Sync zu Supabase/PostgreSQL;
+      :Queue: done;
+    else (nein)
+      :Queue: pending;
+      note right
+        Wird später
+        synchronisiert
+      end note
+    endif
+    
+  repeat while (Weitere Aktion?) is (ja)
+  ->nein;
+}
+
+partition "Offline-Synchronisation" {
+  if (Wieder online &\nPending Ops?) then (ja)
+    :Sync-Prozess starten;
+    
+    repeat
+      :Nächste Operation\naus Queue holen;
+      :Status: syncing;
+      
+      :Zu Supabase senden;
+      
+      if (Erfolgreich?) then (ja)
+        :Queue: done;
+      else (nein)
+        :Queue: failed;
+        note right
+          Retry möglich
+        end note
+      endif
+      
+    repeat while (Weitere Ops?) is (ja)
+    ->nein;
+  endif
+}
+
+:Abmelden;
+
+stop
+
+@enduml
