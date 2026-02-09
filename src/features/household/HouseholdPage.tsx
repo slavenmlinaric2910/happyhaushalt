@@ -24,26 +24,10 @@ export function HouseholdPage() {
 
   const [copied, setCopied] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [showChooseOwnerDialog, setShowChooseOwnerDialog] = useState(false);
+  const [nextOwnerUserId, setNextOwnerUserId] = useState<string>('');
+  const [leaveErrorMessage, setLeaveErrorMessage] = useState<string | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
-
-  const leaveHouseholdMutation = useMutation({
-    mutationFn: async () => {
-      await memberRepo.leaveCurrentHousehold();
-    },
-    onSuccess: async () => {
-      // Clear cached data so stale household/member info can't reappear after leaving
-      queryClient.clear();
-
-      // Sign out to remove session/user data (team requirement)
-      await signOut();
-
-      // Redirect to login and prevent the browser back button from returning here
-      navigate('/login', { replace: true });
-    },
-    onError: (error) => {
-      console.error('Failed to leave household:', error);
-    },
-  });
 
   // Fetch member via offline query (cached)
   const { data: member } = useOfflineQuery({
@@ -85,6 +69,44 @@ export function HouseholdPage() {
 
   const household = householdData?.household;
   const members = useMemo(() => householdData?.members || [], [householdData?.members]);
+
+  const otherMembers = useMemo(
+    () => members.filter((m) => typeof m.userId === 'string' && m.userId !== userId),
+    [members, userId]
+  );
+
+  const isOwner = household?.createdBy === userId;
+  const mustChooseNextOwner = Boolean(isOwner && otherMembers.length > 0);
+
+  const leaveHouseholdMutation = useMutation({
+    mutationFn: async (nextOwnerId?: string | null) => {
+      await memberRepo.leaveCurrentHousehold(nextOwnerId ?? null);
+    },
+    onSuccess: async () => {
+      queryClient.clear();
+      await signOut();
+      navigate('/login', { replace: true });
+    },
+    onError: (error) => {
+      console.error('Failed to leave household:', error);
+
+      const msg = error instanceof Error ? error.message : String(error);
+      setLeaveErrorMessage(msg);
+
+      // Fallback: if backend demands next owner, open chooser dialog
+      if (msg.toLowerCase().includes('owner must choose next owner')) {
+        setShowLeaveDialog(false);
+
+        // Preselect first other member if possible
+        const firstOther = otherMembers[0]?.userId;
+        if (!nextOwnerUserId && typeof firstOther === 'string') {
+          setNextOwnerUserId(firstOther);
+        }
+
+        setShowChooseOwnerDialog(true);
+      }
+    },
+  });
 
   const handleCopyCode = async () => {
     if (!household?.joinCode) return;
@@ -291,7 +313,20 @@ export function HouseholdPage() {
         </Button>
 
         <Button
-          onClick={() => setShowLeaveDialog(true)}
+          onClick={() => {
+            setLeaveErrorMessage(null);
+
+            if (mustChooseNextOwner) {
+              const firstOther = otherMembers[0]?.userId;
+              if (!nextOwnerUserId && typeof firstOther === 'string') {
+                setNextOwnerUserId(firstOther);
+              }
+              setShowChooseOwnerDialog(true);
+              return;
+            }
+
+            setShowLeaveDialog(true);
+          }}
           disabled={leaveHouseholdMutation.isPending}
           variant="ghost"
           className={styles.leaveButton}
@@ -309,18 +344,60 @@ export function HouseholdPage() {
         cancelLabel="Cancel"
         confirmVariant="primary"
         confirmDisabled={leaveHouseholdMutation.isPending}
-        onCancel={() => setShowLeaveDialog(false)}
+        onCancel={() => {
+          setShowLeaveDialog(false);
+          setLeaveErrorMessage(null);
+        }}
         onConfirm={async () => {
           setShowLeaveDialog(false);
-          await leaveHouseholdMutation.mutateAsync();
+          await leaveHouseholdMutation.mutateAsync(null);
         }}
-      />
+      >
+        {leaveErrorMessage ? <p className={styles.errorMessage}>{leaveErrorMessage}</p> : null}
+      </ConfirmDialog>
 
-      <InviteModal
-        isOpen={showInviteModal}
-        joinCode={household.joinCode}
-        onClose={() => setShowInviteModal(false)}
-      />
+      <ConfirmDialog
+        open={showChooseOwnerDialog}
+        title="Choose next owner"
+        description="As the owner, you must choose a new owner before leaving this household."
+        confirmLabel={leaveHouseholdMutation.isPending ? 'Leaving…' : 'Transfer & Leave'}
+        cancelLabel="Cancel"
+        confirmVariant="primary"
+        confirmDisabled={leaveHouseholdMutation.isPending || !nextOwnerUserId}
+        onCancel={() => {
+          setShowChooseOwnerDialog(false);
+          setLeaveErrorMessage(null);
+        }}
+        onConfirm={async () => {
+          setLeaveErrorMessage(null);
+          await leaveHouseholdMutation.mutateAsync(nextOwnerUserId);
+        }}
+      >
+        <label style={{ display: 'block', marginBottom: '0.25rem' }} htmlFor="next-owner-select">
+          Next owner
+        </label>
+        <select
+          id="next-owner-select"
+          value={nextOwnerUserId}
+          onChange={(e) => setNextOwnerUserId(e.target.value)}
+          style={{ width: '100%', padding: '0.5rem', borderRadius: 8 }}
+        >
+          <option value="">Select a member</option>
+          {otherMembers.map((m) => (
+            <option key={m.userId as string} value={m.userId as string}>
+              {m.displayName}
+            </option>
+          ))}
+        </select>
+
+        {leaveErrorMessage ? (
+          <p className={styles.errorMessage} style={{ marginTop: '0.5rem' }}>
+            {leaveErrorMessage}
+          </p>
+        ) : null}
+      </ConfirmDialog>
+
+      <InviteModal isOpen={showInviteModal} joinCode={household.joinCode} onClose={() => setShowInviteModal(false)} />
     </div>
   );
 }

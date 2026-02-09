@@ -99,10 +99,71 @@ describe('HouseholdPage - Leave button', () => {
       id: 'member-1',
       userId: 'user-1',
       householdId: 'household-1',
-      displayName: 'Owner User',
+      displayName: 'User 1',
       avatarId: 'broom-buddy',
     });
 
+    mockMemberRepo.leaveCurrentHousehold.mockResolvedValue(undefined);
+  });
+
+  it('non-owner can leave normally and navigates to login', async () => {
+    const user = userEvent.setup();
+
+    // user-1 is NOT owner here
+    mockHouseholdRepo.getCurrentHouseholdWithMembers.mockResolvedValue({
+      household: {
+        id: 'household-1',
+        name: 'Test Household',
+        joinCode: 'ABC123',
+        createdBy: 'user-2',
+      },
+      members: [
+        {
+          id: 'member-1',
+          userId: 'user-1',
+          householdId: 'household-1',
+          displayName: 'User 1',
+          avatarId: 'broom-buddy',
+        },
+        {
+          id: 'member-2',
+          userId: 'user-2',
+          householdId: 'household-1',
+          displayName: 'Owner User',
+          avatarId: 'broom-buddy',
+        },
+      ],
+    });
+
+    renderWithProviders();
+
+    expect(await screen.findByRole('button', { name: /invite/i })).toBeInTheDocument();
+
+    const leaveButton = await screen.findByRole('button', { name: /leave/i });
+    await user.click(leaveButton);
+
+    const dialog = await screen.findByRole('dialog');
+    const confirmLeaveButton = within(dialog).getByRole('button', { name: /^leave$/i });
+    await user.click(confirmLeaveButton);
+
+    await waitFor(() => {
+      expect(mockMemberRepo.leaveCurrentHousehold).toHaveBeenCalledTimes(1);
+      expect(mockMemberRepo.leaveCurrentHousehold).toHaveBeenCalledWith(null);
+    });
+
+    await waitFor(() => {
+      expect(signOutMock).toHaveBeenCalledTimes(1);
+    });
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
+    });
+  });
+
+  it('owner with other members must choose next owner, then can transfer & leave', async () => {
+    const user = userEvent.setup();
+
+    // user-1 IS owner here and there is another member
     mockHouseholdRepo.getCurrentHouseholdWithMembers.mockResolvedValue({
       household: {
         id: 'household-1',
@@ -128,27 +189,28 @@ describe('HouseholdPage - Leave button', () => {
       ],
     });
 
-    mockMemberRepo.leaveCurrentHousehold.mockResolvedValue(undefined);
-  });
-
-  it('leaves the household and navigates to login', async () => {
-    const user = userEvent.setup();
     renderWithProviders();
 
-    // Wait until the real (non-loading) UI is visible
     expect(await screen.findByRole('button', { name: /invite/i })).toBeInTheDocument();
 
-    // Click Leave -> opens dialog
     const leaveButton = await screen.findByRole('button', { name: /leave/i });
     await user.click(leaveButton);
 
-    // Confirm inside dialog -> triggers mutation
     const dialog = await screen.findByRole('dialog');
-    const confirmLeaveButton = within(dialog).getByRole('button', { name: /^leave$/i });
-    await user.click(confirmLeaveButton);
+
+    // ensure we're on the choose-owner flow
+    expect(within(dialog).getByText(/choose next owner/i)).toBeInTheDocument();
+
+    // select next owner (explicit, even if preselected)
+    const nextOwnerSelect = within(dialog).getByLabelText(/next owner/i);
+    await user.selectOptions(nextOwnerSelect, 'user-2');
+
+    const confirmTransferButton = within(dialog).getByRole('button', { name: /transfer & leave/i });
+    await user.click(confirmTransferButton);
 
     await waitFor(() => {
       expect(mockMemberRepo.leaveCurrentHousehold).toHaveBeenCalledTimes(1);
+      expect(mockMemberRepo.leaveCurrentHousehold).toHaveBeenCalledWith('user-2');
     });
 
     await waitFor(() => {
