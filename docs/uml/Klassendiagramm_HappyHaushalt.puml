@@ -1,0 +1,99 @@
+@startuml HappyHaushalt_Simplified
+
+!theme plain
+skinparam backgroundColor #F6F3EF
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #8B7355
+skinparam arrowColor #8B7355
+
+' ===== DOMAIN ENTITIES =====
+
+class Household {
+    - id: string
+    - name: string
+    - joinCode: string
+    - createdAt: Date
+    ---
+    + createHousehold(name): Household
+    + findByJoinCode(code): Household
+    + joinByCode(code): Household
+    + listMembers(): Member[]
+}
+
+class Member {
+    - id: string
+    - displayName: string
+    - avatarId: string
+    - householdId: string
+    ---
+    + getCurrentMember(): Member
+    + ensureMemberExists(args): Member
+    + leaveHousehold(): void
+}
+
+class ChoreTemplate {
+    - id: string
+    - name: string
+    - frequency: string
+    - rotationMemberIds: string[]
+    - areaId: string
+    ---
+    + createChore(data): ChoreTemplate
+    + updateChore(data): ChoreTemplate
+    + archiveChore(): void
+    + listChores(): ChoreTemplate[]
+}
+
+class Task {
+    - id: string
+    - title: string
+    - dueDate: Date
+    - status: string
+    - assignedUserId: string
+    ---
+    + createTask(input): Task
+    + completeTask(): void
+    + listTasks(range): Task[]
+    + regenerateTasksIfNeeded(): void
+}
+
+class Area {
+    - id: string
+    - name: string
+    - key: string
+    ---
+    + listAreas(): Area[]
+}
+
+class OfflineOp {
+    - id: string
+    - type: string
+    - payload: object
+    - status: string
+    ---
+    + enqueue(type, payload): string
+    + syncNow(): void
+    + getQueueState(): QueueState
+}
+
+' ===== RELATIONSHIPS =====
+
+Household "1" --> "1..*" Member : hat >
+Member "0..*" --> "1" Household : < gehört zu
+
+Household "1" --> "0..*" ChoreTemplate : hat >
+ChoreTemplate "1" --> "1..*" Task : erzeugt >
+
+Household "1" --> "0..*" Task : enthält >
+Task "0..*" --> "1" Area : in
+
+Household "1" --> "0..*" Area : definiert >
+
+Household "1" --> "0..*" OfflineOp : < warteschlange
+
+note right of OfflineOp
+  Status: pending
+  syncing, failed, done
+end note
+
+@enduml

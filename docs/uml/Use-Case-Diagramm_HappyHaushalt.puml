@@ -1,0 +1,119 @@
+@startuml HappyHaushalt_UseCases
+
+!theme plain
+skinparam backgroundColor #F6F3EF
+skinparam actorBackgroundColor #FFFFFF
+skinparam actorBorderColor #8B7355
+skinparam usecaseBackgroundColor #FFFFFF
+skinparam usecaseBorderColor #8B7355
+skinparam arrowColor #8B7355
+
+actor Benutzer
+actor Mitglied
+
+rectangle HappyHaushalt {
+    ' ===== AUTHENTICATION =====
+    usecase UC01 as "Anmelden/Registrieren\n(Google OAuth)"
+    usecase UC02 as "Abmelden"
+    
+    ' ===== HOUSEHOLD MANAGEMENT (Benutzer) =====
+    usecase UC03 as "Haushalt beitreten\n(via Join-Code/Link)"
+    
+    ' ===== HOUSEHOLD MANAGEMENT (Mitglied) =====
+    usecase UC04 as "Join-Code kopieren"
+    usecase UC05 as "Mitglieder einladen\n(Link/Code teilen)"
+    usecase UC06 as "Haushalt ansehen"
+    usecase UC07 as "Mitgliederliste anzeigen"
+    usecase UC08 as "Haushalt verlassen"
+    
+    ' ===== ONBOARDING =====
+    usecase UC09 as "Profil einrichten\n(Name + Avatar)"
+    
+    ' ===== TASK MANAGEMENT =====
+    usecase UC10 as "Aufgabe erstellen"
+    usecase UC11 as "Tasks aus Datenbank laden /
+                 Aktualisieren"
+    usecase UC12 as "Aufgabe anzeigen"
+    usecase UC13 as "Aufgabe abschließen"
+    usecase UC14 as "Offline-Synchronisation"
+    
+    ' ===== CHORE MANAGEMENT =====
+    usecase UC15 as "Chore-Vorlage erstellen"
+    usecase UC16 as "Chores aus Datenbank laden /
+                 Aktualisieren"
+    usecase UC17 as "Chore-Instanzen generieren"
+    usecase UC18 as "Chore abschließen"
+    
+    ' ===== INCLUDE/EXTEND RELATIONSHIPS =====
+    
+    UC06 ..|> UC04 : <<include>>
+    UC06 ..|> UC05 : <<include>>
+    
+    UC10 ..|> UC11 : <<include>>
+    UC12 ..|> UC11 : <<include>>
+    UC13 ..|> UC11 : <<include>>
+    UC11 ..|> UC14 : <<include>>
+    
+    UC15 ..|> UC16 : <<include>>
+    UC17 ..|> UC16 : <<include>>
+    UC18 ..|> UC16 : <<include>>
+    UC16 ..|> UC14 : <<include>>
+    
+    UC03 ..|> UC09 : <<include>>
+    UC02 ..|> UC09 : <<include>>
+}
+
+' ===== ACTOR RELATIONSHIPS =====
+Benutzer --> UC01
+Benutzer --> UC03
+Benutzer --> UC09
+
+Mitglied --> UC02
+Mitglied --> UC04
+Mitglied --> UC05
+Mitglied --> UC06
+Mitglied --> UC07
+Mitglied --> UC08
+Mitglied --> UC10
+Mitglied --> UC12
+Mitglied --> UC13
+Mitglied --> UC15
+Mitglied --> UC18
+
+note bottom of UC11
+  Tasks werden aus der Remote-
+  Datenbank geladen und lokal
+  (offline) gespeichert
+end note
+
+note bottom of UC16
+  Chores werden aus der Remote-
+  Datenbank geladen und lokal
+  (offline) gespeichert
+end note
+
+note bottom of UC14
+  Offline-Operationen werden
+  in die Queue eingereiht und
+  später synchronisiert
+end note
+
+note bottom of UC05
+  Nur Mitglieder können andere
+  Benutzer via Join-Code/Link
+  zum Haushalt einladen
+end note
+
+note bottom of UC06
+  Haushalt ansehen inkludiert
+  Join-Code kopieren und
+  Mitglieder einladen
+end note
+
+note bottom of UC08
+  Mitglied kann Haushalt
+  verlassen und wird
+  entfernt
+end note
+
+@enduml
