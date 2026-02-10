@@ -29,3 +29,6 @@ coverage
 playwright-report
 test-results
 dev-dist/
+
+# Ignore Windows-specific metadata streams
+*:Zone.Identifier
