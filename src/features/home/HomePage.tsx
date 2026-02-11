@@ -39,13 +39,15 @@ function groupTasksByDueDate<T extends TaskLike>(tasks: T[], today: Date) {
   for (const task of tasks) {
     if (task.completedAt) continue;
 
-    const due = new Date(task.dueDate);
+    const dueTime = new Date(task.dueDate).setHours(0, 0, 0, 0);
+    const todayTime = startOfToday.getTime();
+    const tomorrowTime = startOfTomorrow.getTime();
 
-    if (due < startOfToday) {
+    if (dueTime < todayTime) {
       overdueTasks.push(task);
-    } else if (due >= startOfToday && due < startOfTomorrow) {
+    } else if (dueTime === todayTime) {
       todayTasks.push(task);
-    } else {
+    } else if (dueTime >= tomorrowTime) {
       upcomingTasks.push(task);
     }
   }
@@ -289,9 +291,9 @@ export function HomePage() {
         />
       </header>
 
-      <HouseMoodCard 
-        status={overdueTasks.length > 0 ? 'needs-attention' : 'good'} 
-        dueToday={todayTasks.length} 
+      <HouseMoodCard
+        status={overdueTasks.length > 0 ? 'needs-attention' : 'good'}
+        dueToday={todayTasks.length}
         overdue={overdueTasks.length}
       />
 

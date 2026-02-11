@@ -22,6 +22,18 @@ interface SupabaseTaskRow {
   updated_at: string;
 }
 
+function formatDateLocalYYYYMMDD(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function parseLocalYYYYMMDD(value: string): Date {
+  const [y, m, d] = value.split('-').map((x) => Number(x));
+  return new Date(y, (m ?? 1) - 1, d ?? 1, 0, 0, 0, 0);
+}
+
 /**
  * Maps a Supabase task row to a domain Task object.
  */
@@ -31,7 +43,7 @@ function mapTask(row: SupabaseTaskRow): Task {
     householdId: row.household_id,
     templateId: row.template_id,
     title: row.title,
-    dueDate: new Date(row.due_date),
+    dueDate: parseLocalYYYYMMDD(row.due_date),
     assignedUserId: row.assigned_user_id,
     areaId: row.area_id ?? undefined,
     status: row.status,
@@ -82,7 +94,7 @@ export class SupabaseTaskRepo implements TaskRepo {
         household_id: supabaseInput.householdId,
         template_id: supabaseInput.templateId,
         title: supabaseInput.title,
-        due_date: supabaseInput.dueDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+        due_date: formatDateLocalYYYYMMDD(supabaseInput.dueDate),
         assigned_user_id: supabaseInput.assignedUserId,
         area_id: supabaseInput.areaId ?? null,
         status: supabaseInput.status,
@@ -253,11 +265,75 @@ export class SupabaseTaskRepo implements TaskRepo {
     return count ?? 0;
   }
 
-  /**
-   * Regenerates tasks if needed (placeholder for future implementation).
-   */
-  async regenerateTasksIfNeeded(): Promise<void> {
-    // TODO: Implement task regeneration logic based on chore templates
-    console.log('regenerateTasksIfNeeded not yet implemented');
+
+  async regenerateTasksIfNeeded(householdId: string): Promise<void> {
+    // 1. Fetch all active chore templates for this household
+    const { data: chores, error: choreError } = await supabase
+      .from('chore_templates')
+      .select('*')
+      .eq('household_id', householdId)
+      .eq('active', true);
+
+    if (choreError || !chores) return;
+
+    // We want to make sure tasks exist at least until tomorrow
+    const generationLimit = new Date();
+    generationLimit.setDate(generationLimit.getDate() + 1);
+    generationLimit.setHours(0, 0, 0, 0);
+
+    for (const chore of chores) {
+      // 2. Find the most recent task for this chore template
+      const { data: lastTask } = await supabase
+        .from('tasks')
+        .select('due_date')
+        .eq('template_id', chore.id)
+        .order('due_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let nextDue: Date;
+
+      if (!lastTask) {
+        // If no task exists yet, start with the chore's start_date
+        nextDue = chore.start_date ? new Date(chore.start_date) : new Date();
+      } else {
+        // Otherwise, calculate the next instance after the last existing one
+        nextDue = this.calculateNextDueDate(new Date(lastTask.due_date), chore.frequency);
+      }
+
+      // 3. Create tasks until we've covered our generation limit (today + tomorrow)
+      while (nextDue <= generationLimit) {
+        // Check if chore end_date has passed
+        if (chore.end_date && nextDue > new Date(chore.end_date)) break;
+
+        await this.createTask({
+          householdId: householdId,
+          templateId: chore.id,
+          title: chore.name,
+          dueDate: new Date(nextDue),
+          assignedUserId: this.determineAssignee(chore),
+          areaId: chore.area_id,
+          status: 'open',
+        });
+
+        // Move to the next instance for the next iteration of the while-loop
+        nextDue = this.calculateNextDueDate(nextDue, chore.frequency);
+      }
+    }
+  }
+
+  private calculateNextDueDate(lastDate: Date, frequency: string): Date {
+    const d = new Date(lastDate);
+    if (frequency === 'daily') d.setDate(d.getDate() + 1);
+    else if (frequency === 'weekly') d.setDate(d.getDate() + 7);
+    else if (frequency === 'biweekly') d.setDate(d.getDate() + 14);
+    else if (frequency === 'monthly') d.setMonth(d.getMonth() + 1);
+    return d;
+  }
+
+  private determineAssignee(chore: any): string {
+    // Simple logic: pick the first person in the rotation for now
+    // You can expand this to rotate based on the last task's assignee
+    return chore.rotation_member_ids?.[0] || '';
   }
 }
