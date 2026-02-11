@@ -20,6 +20,43 @@ const choreRepo = new SupabaseChoreRepo();
 
 const taskRepo = new SupabaseTaskRepo();
 
+function startOfDay(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function parseDateInputLocal(value: string): Date {
+  const [y, m, d] = value.split('-').map((n) => Number(n));
+  return new Date(y, (m ?? 1) - 1, d ?? 1, 0, 0, 0, 0);
+}
+
+function nextDueDate(from: Date, frequency: FrequencyValue): Date {
+  const d = startOfDay(from);
+
+  switch (frequency) {
+    case 'daily': {
+      d.setDate(d.getDate() + 1);
+      return d;
+    }
+    case 'weekly': {
+      d.setDate(d.getDate() + 7);
+      return d;
+    }
+    case 'biweekly': {
+      d.setDate(d.getDate() + 14);
+      return d;
+    }
+    case 'monthly': {
+      d.setMonth(d.getMonth() + 1);
+      return startOfDay(d);
+    }
+    default: {
+      return d;
+    }
+  }
+}
+
 export function CreateChorePage() {
   const navigate = useNavigate();
   const householdRepo = useHouseholdRepo();
@@ -89,34 +126,50 @@ export function CreateChorePage() {
       return choreRepo.createChore(currentHousehold.id, choreInput);
     },
     onSuccess: async (createdChore) => {
-      const currentHousehold = await householdRepo.getCurrentHousehold();
-            if (currentHousehold) {
-              const firstMemberId = selectedAssignees[0];
-              const firstAssigneeUserId =
-                assignees.find((m) => m.id === firstMemberId)?.userId ?? null;
+          const currentHousehold = await householdRepo.getCurrentHousehold();
+          if (currentHousehold) {
+            const firstMemberId = selectedAssignees[0];
+            const firstAssigneeUserId =
+              assignees.find((m) => m.id === firstMemberId)?.userId ?? null;
 
-              if (firstAssigneeUserId) {
-                const firstDueDate = startDate ? new Date(startDate) : new Date();
+            if (firstAssigneeUserId) {
+              const firstDueDate = startDate ? parseDateInputLocal(startDate) : startOfDay(new Date());
+              const endDate = dueDate ? parseDateInputLocal(dueDate) : null;
 
-                await taskRepo.createTask({
-                  householdId: currentHousehold.id,
-                  templateId: (createdChore as any).id,
-                  title: name.trim(),
-                  dueDate: firstDueDate,
-                  assignedUserId: firstAssigneeUserId,
-                  areaId: areaId || undefined,
-                  status: 'open',
+              await taskRepo.createTask({
+                householdId: currentHousehold.id,
+                templateId: (createdChore as any).id,
+                title: name.trim(),
+                dueDate: firstDueDate,
+                assignedUserId: firstAssigneeUserId,
+                areaId: areaId || undefined,
+                status: 'open',
+              });
+
+              const upcomingDueDate = nextDueDate(firstDueDate, frequency);
+              const isWithinEndDate = !endDate || upcomingDueDate.getTime() <= endDate.getTime();
+
+              if (isWithinEndDate) {
+                          await taskRepo.createTask({
+                            householdId: currentHousehold.id,
+                            templateId: (createdChore as any).id,
+                            title: name.trim(),
+                            dueDate: upcomingDueDate,
+                            assignedUserId: firstAssigneeUserId,
+                            areaId: areaId || undefined,
+                            status: 'open',
+                          });
+                        }
+                      }
+                    }
+
+                    // 2) Queries aktualisieren
+                    await queryClient.invalidateQueries({ queryKey: ['chores'] });
+                    await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+
+                    navigate('/tasks');
+                  },
                 });
-              }
-            }
-
-            // 2) Queries aktualisieren
-            await queryClient.invalidateQueries({ queryKey: ['chores'] });
-            await queryClient.invalidateQueries({ queryKey: ['tasks'] });
-
-            navigate('/tasks');
-          },
-        });
 
   const handleSubmit = (e: FormEvent) => {
       e.preventDefault();
