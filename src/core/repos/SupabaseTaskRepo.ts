@@ -289,7 +289,7 @@ export class SupabaseTaskRepo implements TaskRepo {
           // 2. Find the most recent task for this chore template
           const { data: lastTask } = await supabase
             .from('tasks')
-            .select('due_date')
+            .select('due_date, assigned_user_id') // Add assigned_user_id here!
             .eq('template_id', chore.id)
             .order('due_date', { ascending: false })
             .limit(1)
@@ -305,22 +305,26 @@ export class SupabaseTaskRepo implements TaskRepo {
             nextDue = this.calculateNextDueDate(new Date(lastTask.due_date), chore.frequency);
           }
 
-          // 3. Create tasks until we've covered our generation limit (today + tomorrow)
+          let lastAssigneeId = lastTask?.assigned_user_id || null;
+
           while (nextDue <= generationLimit) {
-            // Check if chore end_date has passed
             if (chore.end_date && nextDue > new Date(chore.end_date)) break;
+
+            // Determine the assignee based on who was next
+            const currentAssignee = this.determineNextAssignee(chore, lastAssigneeId);
 
             await this.createTask({
               householdId: householdId,
               templateId: chore.id,
               title: chore.name,
               dueDate: new Date(nextDue),
-              assignedUserId: this.determineAssignee(chore),
+              assignedUserId: currentAssignee,
               areaId: chore.area_id,
               status: 'open',
             });
 
-            // Move to the next instance for the next iteration of the while-loop
+            // Update lastAssigneeId so the next iteration of the while loop picks the NEXT person
+            lastAssigneeId = currentAssignee;
             nextDue = this.calculateNextDueDate(nextDue, chore.frequency);
           }
         }
@@ -339,9 +343,22 @@ export class SupabaseTaskRepo implements TaskRepo {
     return d;
   }
 
-  private determineAssignee(chore: any): string {
-    // Simple logic: pick the first person in the rotation for now
-    // You can expand this to rotate based on the last task's assignee
-    return chore.rotation_member_ids?.[0] || '';
+  private determineNextAssignee(chore: any, lastAssigneeId: string | null): string {
+    const rotation = chore.rotation_member_ids || [];
+    if (rotation.length === 0) return '';
+    if (rotation.length === 1) return rotation[0];
+
+    // If there was no previous task, start with the first person
+    if (!lastAssigneeId) return rotation[0];
+
+    // Find the index of the person who did it last
+    const lastIndex = rotation.indexOf(lastAssigneeId);
+
+    // If the person isn't in the rotation anymore, start over
+    if (lastIndex === -1) return rotation[0];
+
+    // Pick the next index, or wrap back to 0 if at the end
+    const nextIndex = (lastIndex + 1) % rotation.length;
+    return rotation[nextIndex];
   }
 }
