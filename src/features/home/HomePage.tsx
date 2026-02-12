@@ -142,7 +142,15 @@ export function HomePage() {
     queryKey: ['tasks', household?.id, today.toISOString()],
     queryFn: async () => {
       if (!household) return [];
-      await taskRepo.regenerateTasksIfNeeded(household.id);
+
+      // 1. & 2. Parameter übergeben + Try-Catch
+      try {
+        await taskRepo.regenerateTasksIfNeeded(household.id);
+      } catch (error) {
+        console.error("Task regeneration failed, skipping...", error);
+        // Wir tun "einfach nichts" und lassen die App weiterlaufen
+      }
+
       return taskRepo.listTasks(household.id, { start: today, end: tomorrow });
     },
     enabled: !!household,

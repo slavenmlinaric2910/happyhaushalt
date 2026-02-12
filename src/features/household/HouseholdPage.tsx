@@ -273,6 +273,7 @@ export function HouseholdPage() {
         <div className={styles.membersGrid}>
           {members.map((member: Member) => {
             const memberIsOwner = member.userId === household.createdBy;
+            const memberIsCurrentUser = member.userId === userId;
             return (
               <Card key={member.id} className={styles.memberCard}>
                 <img
@@ -287,10 +288,19 @@ export function HouseholdPage() {
                   onError={handleAvatarError}
                 />
                 <p className={styles.memberName}>{member.displayName}</p>
-                {memberIsOwner && (
-                  <div className={styles.ownerTag}>
-                    <Lock size={12} />
-                    <span>Owner</span>
+                {(memberIsCurrentUser || memberIsOwner) && (
+                  <div className={styles.badgesContainer}>
+                    {memberIsOwner && (
+                      <div className={styles.ownerTag}>
+                        <Lock size={12} />
+                        <span>Owner</span>
+                      </div>
+                    )}
+                    {memberIsCurrentUser && (
+                      <div className={styles.youTag}>
+                        <span>You</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </Card>
