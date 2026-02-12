@@ -1,3 +1,4 @@
+import { useId, useState } from 'react';
 import styles from './HomePage.module.css';
 import { SwipeableTaskItem } from './SwipeableTaskItem';
 import { AvatarId } from '@/features/onboarding/avatars.ts';
@@ -36,6 +37,7 @@ type TaskListSectionProps = {
   onEditTask: (taskId: string) => void;
 
   onDeleteTask: (taskId: string) => Promise<void>;
+  defaultOpen?: boolean;
 };
 
 // einfacher Avatar aus Initialen
@@ -112,54 +114,79 @@ export function TaskListSection({
   onToggleComplete,
   onDeleteTask,
   onEditTask,
+  defaultOpen = false,
 }: TaskListSectionProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const bodyId = useId();
+
   return (
-    <>
-      <h2 className={styles.sectionHeader}>{title}</h2>
-      {tasks.length === 0 ? (
-        <p className={styles.emptyState}>{emptyMessage}</p>
-      ) : (
-        <div className={styles.tasksList}>
-          {tasks.map((task) => {
-            const template = choreById.get(task.choreTemplateId);
-            const userTitle = task.title?.trim();
-            const taskTitle =
-              userTitle && userTitle.length > 0 ? userTitle : (template?.name ?? 'Task');
-
-            const member =
-              task.assignedMemberId && memberById
-                ? memberById.get(task.assignedMemberId)
-                : undefined;
-
-            const isChore = Boolean(template);
-            const subtitleBase = member?.displayName?.trim();
-
-            const repeatedText =
-                          isChore && template?.frequency
-                            ? `Repeated ${formatFrequency(template.frequency)}`
-                            : undefined;
-
-            const subtitle = isChore
-                          ? [subtitleBase, 'Chore', repeatedText].filter(Boolean).join(' · ')
-                          : subtitleBase;
-
-            return (
-              <SwipeableTaskItem
-                key={task.id}
-                id={task.id}
-                title={taskTitle}
-                subtitle={subtitle}
-                leftIcon={<MemberAvatar member={member} avatarSrcById={avatarSrcById} />}
-                onComplete={() => onToggleComplete(task.id)}
-                onDelete={() => {
-                  void onDeleteTask(task.id);
-                }}
-                onEdit={() => onEditTask(task.id)}
-              />
-            );
-          })}
+    <section className={styles.taskSectionCard} aria-label={title} data-open={isOpen}>
+      <button
+        type="button"
+        className={styles.taskSectionHeaderButton}
+        onClick={() => setIsOpen((v) => !v)}
+        aria-expanded={isOpen}
+        aria-controls={bodyId}
+      >
+        <h2 className={styles.taskSectionTitle}>{title}</h2>
+        <div className={styles.taskSectionHeaderRight}>
+          <span className={styles.taskSectionMeta} aria-label="Task count">
+            {tasks.length}
+          </span>
+          <span className={styles.taskSectionChevron} aria-hidden="true">
+            ▾
+          </span>
         </div>
-      )}
-    </>
+      </button>
+
+      {isOpen ? (
+        <div className={styles.taskSectionBody} id={bodyId}>
+          {tasks.length === 0 ? (
+            <p className={styles.emptyState}>{emptyMessage}</p>
+          ) : (
+            <div className={styles.tasksList}>
+              {tasks.map((task) => {
+                const template = choreById.get(task.choreTemplateId);
+                const userTitle = task.title?.trim();
+                const taskTitle =
+                  userTitle && userTitle.length > 0 ? userTitle : (template?.name ?? 'Task');
+
+                const member =
+                  task.assignedMemberId && memberById
+                    ? memberById.get(task.assignedMemberId)
+                    : undefined;
+
+                const isChore = Boolean(template);
+                const subtitleBase = member?.displayName?.trim();
+
+                const repeatedText =
+                  isChore && template?.frequency
+                    ? `Repeated ${formatFrequency(template.frequency)}`
+                    : undefined;
+
+                const subtitle = isChore
+                  ? [subtitleBase, 'Chore', repeatedText].filter(Boolean).join(' · ')
+                  : subtitleBase;
+
+                return (
+                  <SwipeableTaskItem
+                    key={task.id}
+                    id={task.id}
+                    title={taskTitle}
+                    subtitle={subtitle}
+                    leftIcon={<MemberAvatar member={member} avatarSrcById={avatarSrcById} />}
+                    onComplete={() => onToggleComplete(task.id)}
+                    onDelete={() => {
+                      void onDeleteTask(task.id);
+                    }}
+                    onEdit={() => onEditTask(task.id)}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : null}
+    </section>
   );
 }
