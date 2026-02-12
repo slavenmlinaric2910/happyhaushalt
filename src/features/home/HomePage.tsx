@@ -1,11 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { useHouseholdRepo, useChoreRepo, useMemberRepo } from '../../app/providers/RepoProvider';
-import { IconButton } from '../../core/ui/IconButton';
 import { HouseMoodCard } from './HouseMoodCard';
 import styles from './HomePage.module.css';
 import { TaskListSection } from './TaskListSection';
-import { Settings } from 'lucide-react';
 import { SupabaseTaskRepo } from '../../core/repos/SupabaseTaskRepo';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { CompletedTasksPage } from '@/features/filter/CompletedTasksPage';
@@ -299,12 +297,6 @@ export function HomePage() {
     <div className={styles.page} ref={pageRef} key="home">
       <header className={styles.header}>
         <h1 className={styles.title}>Tasks</h1>
-        <IconButton
-          icon={<Settings size={20} />}
-          variant="ghost"
-          size="md"
-          aria-label="Settings"
-        />
       </header>
 
       <HouseMoodCard
@@ -313,66 +305,68 @@ export function HomePage() {
         overdue={householdOverdueTasks.length}
       />
 
-      <div className={styles.tabs}>
-        <div className={styles.filterWrap}>
-          <button
-            ref={filterButtonRef}
-            type="button"
-            className={styles.filterButton}
-            onClick={() => setIsFilterOpen((v) => !v)}
-            aria-haspopup="menu"
-            aria-expanded={isFilterOpen}
-            aria-controls="task-filter-menu"
-          >
-            Filter <span className={styles.filterChevron} aria-hidden="true">▾</span>
-          </button>
-
-          {isFilterOpen && (
-            <div
-              id="task-filter-menu"
-              ref={filterMenuRef}
-              className={styles.filterMenu}
-              role="menu"
-              aria-label="Filter"
+      <div className={styles.filterRow}>
+        <div className={styles.tabs}>
+          <div className={styles.filterWrap}>
+            <button
+              ref={filterButtonRef}
+              type="button"
+              className={styles.filterButton}
+              onClick={() => setIsFilterOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={isFilterOpen}
+              aria-controls="task-filter-menu"
             >
-              <button
-                type="button"
-                className={styles.filterOption}
-                onClick={() => applyFilter('completed')}
-                role="menuitemradio"
-                aria-checked={isCompletedSelected}
+              Filter <span className={styles.filterChevron} aria-hidden="true">▾</span>
+            </button>
+
+            {isFilterOpen && (
+              <div
+                id="task-filter-menu"
+                ref={filterMenuRef}
+                className={styles.filterMenu}
+                role="menu"
+                aria-label="Filter"
               >
-                Completed
-              </button>
-              <button
-                type="button"
-                className={styles.filterOption}
-                onClick={() => applyFilter('deleted')}
-                role="menuitemradio"
-                aria-checked={isDeletedSelected}
-              >
-                Deleted
-              </button>
-              <button
-                type="button"
-                className={styles.filterOption}
-                onClick={() => applyFilter('mine')}
-                role="menuitemradio"
-                aria-checked={isMineSelected}
-              >
-                Mine
-              </button>
-              <button
-                type="button"
-                className={styles.filterOption}
-                onClick={() => applyFilter('all')}
-                role="menuitemradio"
-                aria-checked={isAllSelected}
-              >
-                All
-              </button>
-            </div>
-          )}
+                <button
+                  type="button"
+                  className={styles.filterOption}
+                  onClick={() => applyFilter('completed')}
+                  role="menuitemradio"
+                  aria-checked={isCompletedSelected}
+                >
+                  Completed
+                </button>
+                <button
+                  type="button"
+                  className={styles.filterOption}
+                  onClick={() => applyFilter('deleted')}
+                  role="menuitemradio"
+                  aria-checked={isDeletedSelected}
+                >
+                  Deleted
+                </button>
+                <button
+                  type="button"
+                  className={styles.filterOption}
+                  onClick={() => applyFilter('mine')}
+                  role="menuitemradio"
+                  aria-checked={isMineSelected}
+                >
+                  Mine
+                </button>
+                <button
+                  type="button"
+                  className={styles.filterOption}
+                  onClick={() => applyFilter('all')}
+                  role="menuitemradio"
+                  aria-checked={isAllSelected}
+                >
+                  All
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
