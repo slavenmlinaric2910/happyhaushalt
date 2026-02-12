@@ -159,6 +159,11 @@ export function HomePage() {
     return allTasks.filter((task) => task.assignedMemberId === user.id);
   }, [tasksFromQuery, scope, user]);
 
+  const { overdueTasks: householdOverdueTasks, todayTasks: householdTodayTasks } = useMemo(
+    () => groupTasksByDueDate(tasksFromQuery as TaskLike[], today),
+    [tasksFromQuery, today],
+  );
+
   const { overdueTasks, todayTasks, upcomingTasks } = useMemo(
     () => groupTasksByDueDate(filteredTasks as TaskLike[], today),
     [filteredTasks, today],
@@ -303,9 +308,9 @@ export function HomePage() {
       </header>
 
       <HouseMoodCard
-        status={overdueTasks.length > 0 ? 'needs-attention' : 'good'}
-        dueToday={todayTasks.length}
-        overdue={overdueTasks.length}
+        status={householdOverdueTasks.length > 0 ? 'needs-attention' : 'good'}
+        dueToday={householdTodayTasks.length}
+        overdue={householdOverdueTasks.length}
       />
 
       <div className={styles.tabs}>
