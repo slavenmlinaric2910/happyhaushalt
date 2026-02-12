@@ -1,3 +1,4 @@
+import React from 'react';
 import { Card } from './Card';
 import { Button } from './Button';
 import styles from './ConfirmDialog.module.css';
@@ -12,12 +13,9 @@ interface ConfirmDialogProps {
   confirmDisabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  children?: React.ReactNode; // ✅ add
 }
 
-/**
- * Simple confirmation dialog with overlay.
- * This avoids the browser-native window.confirm and keeps styling consistent.
- */
 export function ConfirmDialog({
   open,
   title,
@@ -28,6 +26,7 @@ export function ConfirmDialog({
   confirmDisabled = false,
   onConfirm,
   onCancel,
+  children, // ✅ add
 }: ConfirmDialogProps) {
   if (!open) return null;
 
@@ -38,16 +37,15 @@ export function ConfirmDialog({
 
         {description && <p className={styles.description}>{description}</p>}
 
+        {/* ✅ render custom body content */}
+        {children}
+
         <div className={styles.actions}>
           <Button variant="ghost" onClick={onCancel}>
             {cancelLabel}
           </Button>
 
-          <Button
-            variant={confirmVariant}
-            disabled={confirmDisabled}
-            onClick={onConfirm}
-          >
+          <Button variant={confirmVariant} disabled={confirmDisabled} onClick={onConfirm}>
             {confirmLabel}
           </Button>
         </div>
