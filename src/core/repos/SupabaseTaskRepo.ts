@@ -267,72 +267,118 @@ export class SupabaseTaskRepo implements TaskRepo {
 
 
   async regenerateTasksIfNeeded(householdId?: string): Promise<void> {
-      // Falls keine ID übergeben wurde, einfach abbrechen (nichts tun)
-      if (!householdId) return;
+    // Falls keine ID übergeben wurde, einfach abbrechen (nichts tun)
+    if (!householdId) return;
 
-      try {
-        // 1. Fetch all active chore templates for this household
-        const { data: chores, error: choreError } = await supabase
-          .from('chore_templates')
-          .select('*')
-          .eq('household_id', householdId)
-          .eq('active', true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const sessionUserId = session?.user?.id ?? null;
 
-        if (choreError || !chores) return;
+      // 1. Fetch all active chore templates for this household
+      const { data: chores, error: choreError } = await supabase
+        .from('chore_templates')
+        .select('*')
+        .eq('household_id', householdId)
+        .eq('active', true);
 
-        // We want to make sure tasks exist at least until tomorrow
-        const generationLimit = new Date();
-        generationLimit.setDate(generationLimit.getDate() + 1);
-        generationLimit.setHours(0, 0, 0, 0);
+      if (choreError || !chores || chores.length === 0) return;
 
-        for (const chore of chores) {
-          // 2. Find the most recent task for this chore template
-          const { data: lastTask } = await supabase
-            .from('tasks')
-            .select('due_date, assigned_user_id') // Add assigned_user_id here!
-            .eq('template_id', chore.id)
-            .order('due_date', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+      // 2. Fetch members and build Member-ID → User-ID mapping (for RLS compliance)
+      const { data: members, error: memberError } = await supabase
+        .from('members')
+        .select('id, user_id')
+        .eq('household_id', householdId);
 
-          let nextDue: Date;
+      if (memberError) return;
 
-          if (!lastTask) {
-            // If no task exists yet, start with the chore's start_date
-            nextDue = chore.start_date ? new Date(chore.start_date) : new Date();
-          } else {
-            // Otherwise, calculate the next instance after the last existing one
-            nextDue = this.calculateNextDueDate(new Date(lastTask.due_date), chore.frequency);
-          }
-
-          let lastAssigneeId = lastTask?.assigned_user_id || null;
-
-          while (nextDue <= generationLimit) {
-            if (chore.end_date && nextDue > new Date(chore.end_date)) break;
-
-            // Determine the assignee based on who was next
-            const currentAssignee = this.determineNextAssignee(chore, lastAssigneeId);
-
-            await this.createTask({
-              householdId: householdId,
-              templateId: chore.id,
-              title: chore.name,
-              dueDate: new Date(nextDue),
-              assignedUserId: currentAssignee,
-              areaId: chore.area_id,
-              status: 'open',
-            });
-
-            // Update lastAssigneeId so the next iteration of the while loop picks the NEXT person
-            lastAssigneeId = currentAssignee;
-            nextDue = this.calculateNextDueDate(nextDue, chore.frequency);
-          }
+      const memberIdToUserId = new Map<string, string>();
+      const userIdToMemberId = new Map<string, string>();
+      for (const member of members ?? []) {
+        if (member?.id && member?.user_id) {
+          memberIdToUserId.set(String(member.id), String(member.user_id));
+          userIdToMemberId.set(String(member.user_id), String(member.id));
         }
-      } catch (error) {
-        // "Einfach nichts tun" bei Fehlern
-        console.error("Task regeneration failed:", error);
       }
+
+      // 3. Fetch ALL most recent tasks for all chore templates in ONE query (N+1 fix)
+      const choreIds = chores.map((c) => c.id);
+      const { data: allTasks } = await supabase
+        .from('tasks')
+        .select('template_id, due_date, assigned_user_id')
+        .in('template_id', choreIds)
+        .order('due_date', { ascending: false });
+
+      // Group tasks by template_id and find the most recent for each
+      const lastTaskByTemplateId = new Map<string, { dueDate: Date; assignedUserId: string | null }>();
+      for (const task of allTasks ?? []) {
+        if (!task.template_id) continue;
+        const templateId = String(task.template_id);
+        if (!lastTaskByTemplateId.has(templateId)) {
+          lastTaskByTemplateId.set(templateId, {
+            dueDate: new Date(task.due_date),
+            assignedUserId: task.assigned_user_id || null,
+          });
+        }
+      }
+
+      // We want to make sure tasks exist at least until tomorrow
+      const generationLimit = new Date();
+      generationLimit.setDate(generationLimit.getDate() + 1);
+      generationLimit.setHours(0, 0, 0, 0);
+
+      for (const chore of chores) {
+        let nextDue: Date;
+        let lastAssigneeUserId: string | null = null;
+
+        const lastTask = lastTaskByTemplateId.get(chore.id);
+        if (!lastTask) {
+          // If no task exists yet, start with the chore's start_date
+          nextDue = chore.start_date ? new Date(chore.start_date) : new Date();
+        } else {
+          // Otherwise, calculate the next instance after the last existing one
+          nextDue = this.calculateNextDueDate(lastTask.dueDate, chore.frequency);
+          lastAssigneeUserId = lastTask.assignedUserId;
+        }
+
+        // 4. Create tasks until we've covered our generation limit (today + tomorrow)
+        while (nextDue <= generationLimit) {
+          // Check if chore end_date has passed
+          if (chore.end_date && nextDue > new Date(chore.end_date)) break;
+
+          // Determine the next assignee (with rotation + Member→User mapping)
+          const currentAssigneeUserId = this.determineNextAssignee(
+            chore,
+            lastAssigneeUserId,
+            memberIdToUserId,
+            sessionUserId
+          );
+
+          if (!currentAssigneeUserId) {
+            break;
+          }
+
+          await this.createTask({
+            householdId: householdId,
+            templateId: chore.id,
+            title: chore.name,
+            dueDate: new Date(nextDue),
+            assignedUserId: currentAssigneeUserId,
+            areaId: chore.area_id,
+            status: 'open',
+          });
+
+          // Update lastAssigneeUserId for the next iteration (rotation continues)
+          lastAssigneeUserId = currentAssigneeUserId;
+          nextDue = this.calculateNextDueDate(nextDue, chore.frequency);
+        }
+      }
+    } catch (error) {
+      // "Einfach nichts tun" bei Fehlern
+      console.error('Task regeneration failed:', error);
     }
+  }
 
   private calculateNextDueDate(lastDate: Date, frequency: string): Date {
     const d = new Date(lastDate);
@@ -343,22 +389,41 @@ export class SupabaseTaskRepo implements TaskRepo {
     return d;
   }
 
-  private determineNextAssignee(chore: any, lastAssigneeId: string | null): string {
-    const rotation = chore.rotation_member_ids || [];
-    if (rotation.length === 0) return '';
-    if (rotation.length === 1) return rotation[0];
+  private determineNextAssignee(
+    chore: any,
+    lastAssigneeUserId: string | null,
+    memberIdToUserId: Map<string, string>,
+    sessionUserId: string | null
+  ): string {
+    // rotation_member_ids stores Member IDs; we need to map to User IDs for RLS
+    const rotationMemberIds: string[] = chore.rotation_member_ids || [];
+    if (rotationMemberIds.length === 0) return '';
+
+    // Map Member IDs to User IDs
+    const rotationUserIds = rotationMemberIds
+      .map((memberId) => memberIdToUserId.get(String(memberId)))
+      .filter((userId): userId is string => Boolean(userId));
+
+    if (rotationUserIds.length === 0) {
+      // Fallback: if no valid user IDs in rotation, use session user if they're a member
+      return sessionUserId && Array.from(memberIdToUserId.values()).includes(sessionUserId)
+        ? sessionUserId
+        : '';
+    }
+
+    if (rotationUserIds.length === 1) return rotationUserIds[0];
 
     // If there was no previous task, start with the first person
-    if (!lastAssigneeId) return rotation[0];
+    if (!lastAssigneeUserId) return rotationUserIds[0];
 
     // Find the index of the person who did it last
-    const lastIndex = rotation.indexOf(lastAssigneeId);
+    const lastIndex = rotationUserIds.indexOf(lastAssigneeUserId);
 
     // If the person isn't in the rotation anymore, start over
-    if (lastIndex === -1) return rotation[0];
+    if (lastIndex === -1) return rotationUserIds[0];
 
     // Pick the next index, or wrap back to 0 if at the end
-    const nextIndex = (lastIndex + 1) % rotation.length;
-    return rotation[nextIndex];
+    const nextIndex = (lastIndex + 1) % rotationUserIds.length;
+    return rotationUserIds[nextIndex];
   }
 }
