@@ -7,6 +7,7 @@ import styles from './HomePage.module.css';
 import { TaskListSection } from './TaskListSection';
 import { Settings } from 'lucide-react';
 import { SupabaseTaskRepo } from '../../core/repos/SupabaseTaskRepo';
+import { useAuth } from '../../app/providers/AuthProvider';
 import { CompletedTasksPage } from '@/features/filter/CompletedTasksPage';
 import { DeletedTasksPage } from '@/features/filter/DeletedTasksPage';
 import { AVATARS, type AvatarId } from '../onboarding/avatars';
@@ -60,6 +61,7 @@ export function HomePage() {
   const choreRepo = useChoreRepo();
   const memberRepo = useMemberRepo();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [view, setView] = useState<HomeView>('home');
   const [scope, setScope] = useState<TaskScope>('mine');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -148,9 +150,23 @@ export function HomePage() {
     enabled: !!household,
   });
 
-  const { overdueTasks, todayTasks, upcomingTasks } = useMemo(
+  // Filter tasks by scope: "mine" shows only tasks assigned to the current user,
+  // "all" shows every task in the household.
+  const filteredTasks = useMemo(() => {
+    const allTasks = tasksFromQuery as (TaskLike & { assignedMemberId?: string | null })[];
+    if (scope === 'all' || !user) return allTasks;
+
+    return allTasks.filter((task) => task.assignedMemberId === user.id);
+  }, [tasksFromQuery, scope, user]);
+
+  const { overdueTasks: householdOverdueTasks, todayTasks: householdTodayTasks } = useMemo(
     () => groupTasksByDueDate(tasksFromQuery as TaskLike[], today),
     [tasksFromQuery, today],
+  );
+
+  const { overdueTasks, todayTasks, upcomingTasks } = useMemo(
+    () => groupTasksByDueDate(filteredTasks as TaskLike[], today),
+    [filteredTasks, today],
   );
 
   const { data: chores = [] } = useQuery({
@@ -292,9 +308,9 @@ export function HomePage() {
       </header>
 
       <HouseMoodCard
-        status={overdueTasks.length > 0 ? 'needs-attention' : 'good'}
-        dueToday={todayTasks.length}
-        overdue={overdueTasks.length}
+        status={householdOverdueTasks.length > 0 ? 'needs-attention' : 'good'}
+        dueToday={householdTodayTasks.length}
+        overdue={householdOverdueTasks.length}
       />
 
       <div className={styles.tabs}>
