@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useHouseholdRepo, useMemberRepo } from '../../app/providers/RepoProvider';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { Card } from '../../core/ui/Card';
@@ -14,6 +14,7 @@ type Step = 1 | 2;
 
 export function OnboardingPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const householdRepo = useHouseholdRepo();
   const memberRepo = useMemberRepo();
   const { user } = useAuth();
@@ -26,6 +27,20 @@ export function OnboardingPage() {
   const [avatarId, setAvatarId] = useState<AvatarId>(AVATARS[0].id);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const joinParam = new URLSearchParams(location.search).get('join');
+    if (!joinParam) return;
+
+    const normalizedCode = joinParam.toUpperCase().replace(/\s/g, '').slice(0, 6);
+    if (!normalizedCode) return;
+
+    setMode('join');
+    setStep(1);
+    setJoinCode(normalizedCode);
+    setHouseholdName('');
+    setError(null);
+  }, [location.search]);
 
   // Prefill displayName from user metadata
   useEffect(() => {

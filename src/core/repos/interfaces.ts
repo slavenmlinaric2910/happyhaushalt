@@ -55,8 +55,9 @@ export interface MemberRepo {
     displayName: string;
     avatarId: import('../../features/onboarding/avatars').AvatarId;
   }): Promise<Member>;
-  leaveCurrentHousehold(): Promise<void>;
+  leaveCurrentHousehold(nextOwnerUserId?: string | null): Promise<void>;
 }
+
 
 export interface AreaRepo {
   listAreas(): Promise<Area[]>;

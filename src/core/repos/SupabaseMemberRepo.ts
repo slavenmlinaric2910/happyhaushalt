@@ -77,7 +77,7 @@ export class SupabaseMemberRepo implements MemberRepo {
    * - Supabase/PostgREST can return 204 even when 0 rows were deleted (e.g. RLS or no match).
    * - Therefore we request a return payload and validate that something was actually deleted.
    */
-  async leaveCurrentHousehold(): Promise<void> {
+  async leaveCurrentHousehold(nextOwnerUserId?: string | null): Promise<void> {
   const {
     data: { session },
     error: sessionError,
@@ -91,7 +91,7 @@ export class SupabaseMemberRepo implements MemberRepo {
   }
 
   // Call the Postgres function (SECURITY DEFINER)
-  const { error } = await supabase.rpc('leave_household');
+  const { error } = await supabase.rpc('leave_household', { p_next_owner: nextOwnerUserId ?? null });
 
   if (error) {
     throw new Error(`Failed to leave household: ${error.message}`);
