@@ -44,7 +44,7 @@ export interface TaskRepo {
   }): Promise<TaskInstance>;
   createTask(input: CreateTaskInput): Promise<Task>;
   completeTask(taskId: string): Promise<void>;
-  regenerateTasksIfNeeded(): Promise<void>;
+  regenerateTasksIfNeeded(householdId?: string): Promise<void>;
 }
 
 export interface MemberRepo {
