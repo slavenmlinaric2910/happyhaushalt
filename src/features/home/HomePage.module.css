@@ -23,6 +23,11 @@
   text-align: left;
 }
 
+.filterRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
 /* Tabs ("Mine" / "All") */
 .tabs {
   display: inline-flex;
@@ -242,7 +247,8 @@
 .filterMenu {
   position: absolute;
   top: calc(100% + 8px);
-  left: 0;
+  right: 0;
+  left: auto;
   min-width: 180px;
 
   background: rgba(20, 20, 24, 0.98);
