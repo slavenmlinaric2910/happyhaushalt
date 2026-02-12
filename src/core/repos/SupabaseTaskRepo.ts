@@ -266,12 +266,7 @@ export class SupabaseTaskRepo implements TaskRepo {
   }
 
 
-  async regenerateTasksIfNeeded(householdId?: string): Promise<void> {
-    if (!householdId) {
-        console.warn("Regeneration skipped: No householdId provided.");
-        return;
-      }
-
+  async regenerateTasksIfNeeded(householdId: string): Promise<void> {
     // 1. Fetch all active chore templates for this household
     const { data: chores, error: choreError } = await supabase
       .from('chore_templates')
