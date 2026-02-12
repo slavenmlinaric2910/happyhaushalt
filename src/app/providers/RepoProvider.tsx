@@ -88,4 +88,3 @@ export function useAreaRepo(): AreaRepo {
   }
   return context.areaRepo;
 }
-

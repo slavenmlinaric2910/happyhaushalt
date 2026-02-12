@@ -1,11 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { useHouseholdRepo, useChoreRepo, useMemberRepo } from '../../app/providers/RepoProvider';
-import { IconButton } from '../../core/ui/IconButton';
 import { HouseMoodCard } from './HouseMoodCard';
 import styles from './HomePage.module.css';
 import { TaskListSection } from './TaskListSection';
-import { Settings } from 'lucide-react';
 import { SupabaseTaskRepo } from '../../core/repos/SupabaseTaskRepo';
 import { CompletedTasksPage } from '@/features/filter/CompletedTasksPage';
 import { DeletedTasksPage } from '@/features/filter/DeletedTasksPage';
@@ -283,12 +281,6 @@ export function HomePage() {
     <div className={styles.page} ref={pageRef} key="home">
       <header className={styles.header}>
         <h1 className={styles.title}>Tasks</h1>
-        <IconButton
-          icon={<Settings size={20} />}
-          variant="ghost"
-          size="md"
-          aria-label="Settings"
-        />
       </header>
 
       <HouseMoodCard
