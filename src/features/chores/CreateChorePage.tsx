@@ -105,71 +105,76 @@ export function CreateChorePage() {
   };
 
   // Create chore mutation
-  const createChoreMutation = useMutation({
-    mutationFn: async () => {
-      // Get current household
-      const currentHousehold = await householdRepo.getCurrentHousehold();
-      if (!currentHousehold) {
-        throw new Error('No household found for current user');
-      }
+  // Create chore mutation
+    const createChoreMutation = useMutation({
+      mutationFn: async () => {
+        const currentHousehold = await householdRepo.getCurrentHousehold();
+        if (!currentHousehold) {
+          throw new Error('No household found for current user');
+        }
 
-      // Create chore using SupabaseChoreRepo
-      const choreInput = {
-        name: name.trim(),
-        frequency,
-        rotationMemberIds: selectedAssignees,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: dueDate ? new Date(dueDate) : null,
-        areaId: areaId,
-      };
+        const choreInput = {
+          name: name.trim(),
+          frequency,
+          rotationMemberIds: selectedAssignees,
+          startDate: startDate ? new Date(startDate) : null,
+          endDate: dueDate ? new Date(dueDate) : null,
+          areaId: areaId,
+        };
 
-      return choreRepo.createChore(currentHousehold.id, choreInput);
-    },
-    onSuccess: async (createdChore) => {
-          const currentHousehold = await householdRepo.getCurrentHousehold();
-          if (currentHousehold) {
-            const firstMemberId = selectedAssignees[0];
-            const firstAssigneeUserId =
-              assignees.find((m) => m.id === firstMemberId)?.userId ?? null;
+        return choreRepo.createChore(currentHousehold.id, choreInput);
+      },
+      onSuccess: async (createdChore) => {
+        const currentHousehold = await householdRepo.getCurrentHousehold();
+        if (currentHousehold && selectedAssignees.length > 0) {
+          // 1. First Task Assignee
+          const firstMemberId = selectedAssignees[0];
+          const firstAssigneeUserId = assignees.find((m) => m.id === firstMemberId)?.userId ?? null;
 
-            if (firstAssigneeUserId) {
-              const firstDueDate = startDate ? parseDateInputLocal(startDate) : startOfDay(new Date());
-              const endDate = dueDate ? parseDateInputLocal(dueDate) : null;
+          if (firstAssigneeUserId) {
+            const firstDueDate = startDate ? parseDateInputLocal(startDate) : startOfDay(new Date());
+            const endDateInput = dueDate ? parseDateInputLocal(dueDate) : null;
+
+            // Create the very first task
+            await taskRepo.createTask({
+              householdId: currentHousehold.id,
+              templateId: (createdChore as any).id,
+              title: name.trim(),
+              dueDate: firstDueDate,
+              assignedUserId: firstAssigneeUserId,
+              areaId: areaId || undefined,
+              status: 'open',
+            });
+
+            // 2. Second (Upcoming) Task with Rotation Logic
+            const upcomingDueDate = nextDueDate(firstDueDate, frequency);
+            const isWithinEndDate = !endDateInput || upcomingDueDate.getTime() <= endDateInput.getTime();
+
+            if (isWithinEndDate) {
+              // Pick the next person in the rotation array
+              const nextIndex = selectedAssignees.length > 1 ? 1 : 0;
+              const secondMemberId = selectedAssignees[nextIndex];
+              const secondAssigneeUserId = assignees.find((m) => m.id === secondMemberId)?.userId ?? null;
 
               await taskRepo.createTask({
                 householdId: currentHousehold.id,
                 templateId: (createdChore as any).id,
                 title: name.trim(),
-                dueDate: firstDueDate,
-                assignedUserId: firstAssigneeUserId,
+                dueDate: upcomingDueDate,
+                assignedUserId: secondAssigneeUserId || firstAssigneeUserId,
                 areaId: areaId || undefined,
                 status: 'open',
               });
+            }
+          }
+        }
 
-              const upcomingDueDate = nextDueDate(firstDueDate, frequency);
-              const isWithinEndDate = !endDate || upcomingDueDate.getTime() <= endDate.getTime();
-
-              if (isWithinEndDate) {
-                          await taskRepo.createTask({
-                            householdId: currentHousehold.id,
-                            templateId: (createdChore as any).id,
-                            title: name.trim(),
-                            dueDate: upcomingDueDate,
-                            assignedUserId: firstAssigneeUserId,
-                            areaId: areaId || undefined,
-                            status: 'open',
-                          });
-                        }
-                      }
-                    }
-
-                    // 2) Queries aktualisieren
-                    await queryClient.invalidateQueries({ queryKey: ['chores'] });
-                    await queryClient.invalidateQueries({ queryKey: ['tasks'] });
-
-                    navigate('/tasks');
-                  },
-                });
+        // Refresh data and redirect
+        await queryClient.invalidateQueries({ queryKey: ['chores'] });
+        await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        navigate('/tasks');
+      },
+    });
 
   const handleSubmit = (e: FormEvent) => {
       e.preventDefault();
