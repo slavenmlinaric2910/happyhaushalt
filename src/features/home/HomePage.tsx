@@ -389,6 +389,7 @@ export function HomePage() {
           onToggleComplete={handleCompleteTask}
           onDeleteTask={handleDeleteTask}
           onEditTask={handleEditTask}
+          defaultOpen
         />
         <TaskListSection
           title="Upcoming"
@@ -400,6 +401,7 @@ export function HomePage() {
           onToggleComplete={handleCompleteTask}
           onDeleteTask={handleDeleteTask}
           onEditTask={handleEditTask}
+          defaultOpen={false}
         />
         <TaskListSection
           title="Overdue"
@@ -411,6 +413,7 @@ export function HomePage() {
           onToggleComplete={handleCompleteTask}
           onDeleteTask={handleDeleteTask}
           onEditTask={handleEditTask}
+          defaultOpen={false}
         />
       </section>
 
