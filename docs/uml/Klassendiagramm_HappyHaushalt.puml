@@ -50,6 +50,7 @@ class Task {
     - dueDate: Date
     - status: string
     - assignedUserId: string
+    - areaId: string
     ---
     + createTask(input): Task
     + completeTask(): void
