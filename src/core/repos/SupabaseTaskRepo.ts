@@ -266,61 +266,69 @@ export class SupabaseTaskRepo implements TaskRepo {
   }
 
 
-  async regenerateTasksIfNeeded(householdId: string): Promise<void> {
-    // 1. Fetch all active chore templates for this household
-    const { data: chores, error: choreError } = await supabase
-      .from('chore_templates')
-      .select('*')
-      .eq('household_id', householdId)
-      .eq('active', true);
+  async regenerateTasksIfNeeded(householdId?: string): Promise<void> {
+      // Falls keine ID übergeben wurde, einfach abbrechen (nichts tun)
+      if (!householdId) return;
 
-    if (choreError || !chores) return;
+      try {
+        // 1. Fetch all active chore templates for this household
+        const { data: chores, error: choreError } = await supabase
+          .from('chore_templates')
+          .select('*')
+          .eq('household_id', householdId)
+          .eq('active', true);
 
-    // We want to make sure tasks exist at least until tomorrow
-    const generationLimit = new Date();
-    generationLimit.setDate(generationLimit.getDate() + 1);
-    generationLimit.setHours(0, 0, 0, 0);
+        if (choreError || !chores) return;
 
-    for (const chore of chores) {
-      // 2. Find the most recent task for this chore template
-      const { data: lastTask } = await supabase
-        .from('tasks')
-        .select('due_date')
-        .eq('template_id', chore.id)
-        .order('due_date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        // We want to make sure tasks exist at least until tomorrow
+        const generationLimit = new Date();
+        generationLimit.setDate(generationLimit.getDate() + 1);
+        generationLimit.setHours(0, 0, 0, 0);
 
-      let nextDue: Date;
+        for (const chore of chores) {
+          // 2. Find the most recent task for this chore template
+          const { data: lastTask } = await supabase
+            .from('tasks')
+            .select('due_date')
+            .eq('template_id', chore.id)
+            .order('due_date', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-      if (!lastTask) {
-        // If no task exists yet, start with the chore's start_date
-        nextDue = chore.start_date ? new Date(chore.start_date) : new Date();
-      } else {
-        // Otherwise, calculate the next instance after the last existing one
-        nextDue = this.calculateNextDueDate(new Date(lastTask.due_date), chore.frequency);
-      }
+          let nextDue: Date;
 
-      // 3. Create tasks until we've covered our generation limit (today + tomorrow)
-      while (nextDue <= generationLimit) {
-        // Check if chore end_date has passed
-        if (chore.end_date && nextDue > new Date(chore.end_date)) break;
+          if (!lastTask) {
+            // If no task exists yet, start with the chore's start_date
+            nextDue = chore.start_date ? new Date(chore.start_date) : new Date();
+          } else {
+            // Otherwise, calculate the next instance after the last existing one
+            nextDue = this.calculateNextDueDate(new Date(lastTask.due_date), chore.frequency);
+          }
 
-        await this.createTask({
-          householdId: householdId,
-          templateId: chore.id,
-          title: chore.name,
-          dueDate: new Date(nextDue),
-          assignedUserId: this.determineAssignee(chore),
-          areaId: chore.area_id,
-          status: 'open',
-        });
+          // 3. Create tasks until we've covered our generation limit (today + tomorrow)
+          while (nextDue <= generationLimit) {
+            // Check if chore end_date has passed
+            if (chore.end_date && nextDue > new Date(chore.end_date)) break;
 
-        // Move to the next instance for the next iteration of the while-loop
-        nextDue = this.calculateNextDueDate(nextDue, chore.frequency);
+            await this.createTask({
+              householdId: householdId,
+              templateId: chore.id,
+              title: chore.name,
+              dueDate: new Date(nextDue),
+              assignedUserId: this.determineAssignee(chore),
+              areaId: chore.area_id,
+              status: 'open',
+            });
+
+            // Move to the next instance for the next iteration of the while-loop
+            nextDue = this.calculateNextDueDate(nextDue, chore.frequency);
+          }
+        }
+      } catch (error) {
+        // "Einfach nichts tun" bei Fehlern
+        console.error("Task regeneration failed:", error);
       }
     }
-  }
 
   private calculateNextDueDate(lastDate: Date, frequency: string): Date {
     const d = new Date(lastDate);
