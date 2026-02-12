@@ -142,7 +142,7 @@ export function HomePage() {
     queryKey: ['tasks', household?.id, today.toISOString()],
     queryFn: async () => {
       if (!household) return [];
-      await taskRepo.regenerateTasksIfNeeded(household.id);
+      await taskRepo.regenerateTasksIfNeeded();
       return taskRepo.listTasks(household.id, { start: today, end: tomorrow });
     },
     enabled: !!household,
