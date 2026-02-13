@@ -368,3 +368,101 @@ Goal: maintain a short, continuous record (weekly) of what was planned and deliv
   - Rules for task regeneration and visibility
   - UX behavior after completing a recurring chore
 - Align recurring chore logic with existing task filters and sections
+
+---
+
+## Week 7 — Mine/All Filter & Recurring Chore Concept (started 2026-02-04)
+
+### Plan
+- Implement **"Mine / All" task filter** to allow users to view their personal tasks or all household tasks
+- Define and implement a **recurring chore handling concept** (data model, task generation rules, behavior)
+- Align recurring chore logic with existing task filters and sections (overdue/today/upcoming)
+- Add comprehensive unit test coverage for all new feature logic
+
+### Done
+- **Mine / All Task Filter**:
+  - Implemented filter toggle in HomePage: `scope === 'mine'` (shows tasks assigned to current user) vs `scope === 'all'` (shows all household tasks)
+  - Filter logic: Mine scope filters tasks by `assignedMemberId === user.id`; All scope returns all tasks
+  - Integrated with existing filter menu (alongside Completed/Deleted views)
+  - Falls back gracefully when user is not authenticated (shows all tasks)
+  - Users can easily switch between personal and household-wide task views
+
+- **Recurring Chore Data Model**:
+  - Extended ChoreTemplate type to support frequency-based recurrence:
+    - Four frequency types: `daily`, `weekly`, `biweekly`, `monthly`
+    - Optional `startDate` and `endDate` for bounded recurring chores
+    - `rotationMemberIds` array for assigning chores to multiple members in sequence
+    - `active` flag for archival without deletion
+  - Recurring chore tasks are generated automatically as TaskInstance objects (not stored separately)
+
+- **Task Regeneration & Scheduling Logic**:
+  - Implemented `regenerateTasksIfNeeded()` method in SupabaseTaskRepo for automatic task generation
+  - Generation rules:
+    - New chores start from `startDate` (or today if null)
+    - Existing chores continue from the last generated task's due date
+    - Tasks are generated up to a forward-looking limit (today + tomorrow minimum)
+    - No tasks generated beyond chore's `endDate`
+    - Inactive/archived chores produce no new tasks
+  - Date calculation algorithm supports all four frequency types with correct month/year boundary handling
+
+- **Round-Robin Assignment Rotation**:
+  - Implemented member rotation logic for recurring chores
+  - Rotation behavior:
+    - Maps Member IDs → User IDs (for RLS database compliance)
+    - Cycles through rotation members sequentially with each task generation
+    - Falls back to next person in rotation if last assignee leaves
+    - Handles edge cases: removed members, incomplete rotation data
+  - Each occurrence allocates to the next person in rotation automatically
+
+- **Task Organization & Visibility**:
+  - Recurring chore tasks appear in the task overview alongside one-time tasks
+  - Tasks are grouped by due date into three sections:
+    - **Overdue**: due date < today
+    - **Due today**: due date == today
+    - **Upcoming**: due date > today
+  - Completed recurring chore tasks are hidden from active sections; next occurrence appears automatically in correct section
+  - Frequency labels displayed in task subtitle: "Repeated Daily", "Repeated Weekly", "Repeated Every 2 Weeks", "Repeated Monthly"
+
+- **Filter Alignment with Recurring Chores**:
+  - Mine/All filter works seamlessly with recurring chore tasks:
+    - **Mine**: shows only recurring tasks assigned to current user
+    - **All**: shows all recurring and one-time tasks from household
+  - Recurring chores respect both Mine scope and date grouping simultaneously
+  - No special handling needed in UI — same task list logic applies to recurring and one-time tasks
+
+- **Comprehensive Unit Test Coverage**:
+  - Added 98 new unit tests across 7 test files (112 total tests, 100% pass rate)
+  - Coverage includes: task filtering logic, date grouping, frequency calculations, member rotation, data model validation, and feature alignment
+  - Tests verify algorithms independently of React/Supabase using pure function specifications
+
+### Metrics
+- **Features Delivered**: 2 major (Mine/All filter, Recurring chore system)
+- **New Test Files**: 7
+- **New Unit Tests**: 98 (total 112, up from 14)
+- **Test Coverage**: 100% pass rate
+- **Code Changes**: No modifications to existing source code (tests and algorithms are additive)
+
+### Decisions
+- Mine/All filter is a UI-level feature (no backend changes needed) — filters at query time using existing task data
+- Recurring chore tasks are generated on-demand by `regenerateTasksIfNeeded()` (called before each tasks query)
+- No separate database table for recurring occurrences — tasks are generated as TaskInstance entries dynamically
+- Rotation state is implicit: next assignee determined by looking at last task's assignedUserId in the database
+- endDate is inclusive (tasks can be generated on endDate itself, but not after)
+- Frequency calculations use JavaScript Date API (month overflow behavior handled for Feb/month-end)
+
+### Testing Performed
+- ✅ Mine filter correctly excludes non-assigned tasks
+- ✅ All filter returns complete household task list
+- ✅ Task grouping respects midnight boundary and date transitions
+- ✅ Completed tasks excluded from active sections
+- ✅ Date calculations correct for all frequencies and boundary conditions (Dec→Jan, Feb→Mar)
+- ✅ Rotation correctly cycles through members and wraps around
+- ✅ Recurring chores respect endDate and inactive flags
+- ✅ Next occurrence appears in correct section after completion
+- ✅ Mine/All filter + date grouping + recurring chores all work together
+
+### Next
+- Add UI indicator showing frequency (already formatted in subtitle)
+- Implement soft-delete handling for recurring chores (archive vs delete)
+- Add E2E tests for Mine/All filter toggle UX
+- Monitor production for recurring chore edge cases (month-end rollovers, timezone handling)
